@@ -15,8 +15,8 @@ class DashboardController extends Controller
     public function getSummary()
     {
         $totalResidents = Resident::count();
-        $occupiedHouses = House::where('status', 'dihuni')->count();
-        $unoccupiedHouses = House::where('status', 'tidak_dihuni')->count();
+        $occupiedHouses = House::whereHas('activeResidentRelation.resident')->count();
+        $unoccupiedHouses = House::whereDoesntHave('activeResidentRelation.resident')->count();
         $totalHouses = House::count();
         $occupancyRate = $totalHouses > 0 ? round(($occupiedHouses / $totalHouses) * 100) : 0;
 
@@ -136,70 +136,5 @@ class DashboardController extends Controller
         }
 
         return response()->json($chartData);
-    }
-
-    public function getMonthlyReport(Request $request)
-    {
-        $request->validate([
-            'month' => 'required|integer|between:1,12',
-            'year' => 'required|integer',
-        ]);
-
-        $month = intval($request->query('month'));
-        $year = intval($request->query('year'));
-
-        $monthsIndo = [
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
-            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
-        ];
-
-        // Get detailed incomes based on payment_date (actual transaction date)
-        $incomes = Payment::with(['house', 'resident'])
-            ->where('status', 'lunas')
-            ->whereMonth('payment_date', $month)
-            ->whereYear('payment_date', $year)
-            ->get()
-            ->map(function ($payment) use ($monthsIndo) {
-                $billingMonthName = $monthsIndo[$payment->month] ?? 'Bulan';
-                return [
-                    'id' => $payment->id,
-                    'type' => 'Pemasukan - ' . ucfirst($payment->type),
-                    'house_code' => $payment->house->house_code,
-                    'resident_name' => $payment->resident->name,
-                    'description' => 'Iuran ' . ucfirst($payment->type) . ' Periode ' . $billingMonthName . ' ' . $payment->year,
-                    'amount' => $payment->amount,
-                    'date' => $payment->payment_date->format('Y-m-d'),
-                ];
-            });
-
-        // Get detailed expenses
-        $expenses = Expense::whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->get()
-            ->map(function ($expense) {
-                return [
-                    'id' => $expense->id,
-                    'type' => 'Pengeluaran',
-                    'house_code' => '-',
-                    'resident_name' => '-',
-                    'description' => $expense->description,
-                    'amount' => $expense->amount,
-                    'date' => $expense->date->format('Y-m-d'),
-                ];
-            });
-
-        $totalIncome = $incomes->sum('amount');
-        $totalExpense = $expenses->sum('amount');
-        $balance = $totalIncome - $totalExpense;
-
-        // Combine items for a ledger list
-        $ledger = $incomes->concat($expenses)->sortBy('date')->values();
-
-        return response()->json([
-            'ledger' => $ledger,
-            'total_income' => $totalIncome,
-            'total_expense' => $totalExpense,
-            'balance' => $balance,
-        ]);
     }
 }

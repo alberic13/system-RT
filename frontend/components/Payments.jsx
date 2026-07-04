@@ -5,6 +5,7 @@ import {
     getHouses,
     deletePayment
 } from '../services/api';
+import { defaultIuranTypes } from '../config/iuran';
 import { 
     Plus, 
     User,
@@ -34,10 +35,6 @@ export default function Payments() {
     const [searchQuery, setSearchQuery] = useState('');
 
     // Jenis Iuran — loaded from localStorage, defaults to 2 built-in types
-    const defaultIuranTypes = [
-        { key: 'kebersihan', label: 'Kebersihan', amount: 15000 },
-        { key: 'satpam',     label: 'Satpam',     amount: 100000 },
-    ];
     const [iuranTypes, setIuranTypes] = useState(() => {
         try {
             const saved = localStorage.getItem('rt_iuran_types');

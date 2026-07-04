@@ -37,6 +37,5 @@ export const deleteExpense = (id) => api.delete(`/expenses/${id}`);
 // Dashboard & Reports API
 export const getDashboardSummary = () => api.get('/dashboard/summary');
 export const getDashboardFinanceChart = () => api.get('/dashboard/finance-chart');
-export const getMonthlyReport = (month, year) => api.get(`/dashboard/monthly-report?month=${month}&year=${year}`);
 
 export default api;

@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Route;
 // Dashboard & Reports
 Route::get('/dashboard/summary', [DashboardController::class, 'getSummary']);
 Route::get('/dashboard/finance-chart', [DashboardController::class, 'getFinanceChart']);
-Route::get('/reports/monthly', [DashboardController::class, 'getMonthlyReport']);
 
 // Residents
 Route::apiResource('residents', ResidentController::class);

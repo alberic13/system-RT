@@ -8,6 +8,7 @@ import {
     getResidents,
     deleteHouse
 } from '../services/api';
+import { toWhatsAppUrl } from '../utils/phone';
 import { 
     Plus, 
     Home, 
@@ -280,11 +281,7 @@ export default function Houses() {
                                                  <p className="text-xs text-slate-500">Telp: {selectedHouse.active_resident.phone}</p>
                                                  {selectedHouse.active_resident.phone && (
                                                      <a
-                                                         href={(() => {
-                                                             const cleaned = selectedHouse.active_resident.phone.replace(/\D/g, '');
-                                                             const num = cleaned.startsWith('0') ? '62' + cleaned.slice(1) : cleaned.startsWith('62') ? cleaned : '62' + cleaned;
-                                                             return `https://wa.me/${num}`;
-                                                         })()}
+                                                         href={toWhatsAppUrl(selectedHouse.active_resident.phone)}
                                                          target="_blank"
                                                          rel="noopener noreferrer"
                                                          title="Chat WhatsApp"

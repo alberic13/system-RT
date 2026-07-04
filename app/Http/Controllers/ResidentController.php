@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\House;
 use App\Models\HouseResident;
 use App\Models\Resident;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ResidentController extends Controller
 {
@@ -81,16 +83,28 @@ class ResidentController extends Controller
             Storage::disk('public')->delete($oldPath);
         }
 
-        // Sebelum delete: set end_date pada riwayat hunian aktif yang masih terhubung
-        // (FK resident_id akan di-SET NULL oleh database, resident_name tetap tersimpan)
-        HouseResident::where('resident_id', $resident->id)
-            ->where('is_active', true)
-            ->update([
-                'is_active' => false,
-                'end_date'  => now()->toDateString(),
-            ]);
+        DB::transaction(function () use ($resident) {
+            // Dapatkan semua ID rumah di mana warga ini saat ini aktif sebagai penghuni
+            $houseIds = HouseResident::where('resident_id', $resident->id)
+                ->where('is_active', true)
+                ->pluck('house_id');
 
-        $resident->delete();
+            // Sebelum delete: set end_date pada riwayat hunian aktif yang masih terhubung
+            // (FK resident_id akan di-SET NULL oleh database, resident_name tetap tersimpan)
+            HouseResident::where('resident_id', $resident->id)
+                ->where('is_active', true)
+                ->update([
+                    'is_active' => false,
+                    'end_date'  => now()->toDateString(),
+                ]);
+
+            // Update status unit rumah yang ditinggalkan menjadi 'tidak_dihuni'
+            if ($houseIds->isNotEmpty()) {
+                House::whereIn('id', $houseIds)->update(['status' => 'tidak_dihuni']);
+            }
+
+            $resident->delete();
+        });
 
         return response()->json(['message' => 'Resident deleted successfully']);
     }

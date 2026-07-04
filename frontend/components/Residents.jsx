@@ -5,6 +5,7 @@ import {
     updateResident, 
     deleteResident 
 } from '../services/api';
+import { toWhatsAppUrl } from '../utils/phone';
 import { 
     Plus, 
     Edit2, 
@@ -132,19 +133,6 @@ export default function Residents() {
         res.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         res.phone.includes(searchQuery)
     );
-
-    // Converts local Indonesian phone number to WhatsApp wa.me URL
-    // e.g. 08123456789 -> https://wa.me/628123456789
-    const toWhatsAppUrl = (phone) => {
-        if (!phone) return '#';
-        const cleaned = phone.replace(/\D/g, ''); // strip non-digits
-        const number = cleaned.startsWith('0')
-            ? '62' + cleaned.slice(1)
-            : cleaned.startsWith('62')
-                ? cleaned
-                : '62' + cleaned;
-        return `https://wa.me/${number}`;
-    };
 
     const totalTetap = residents.filter(r => r.status === 'tetap').length;
     const totalKontrak = residents.filter(r => r.status === 'kontrak').length;

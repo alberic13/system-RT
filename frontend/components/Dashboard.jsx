@@ -4,6 +4,7 @@ import {
     getDashboardFinanceChart,
     getBillingStatus 
 } from '../services/api';
+import { defaultIuranTypes } from '../config/iuran';
 import { 
     Users, 
     Home, 
@@ -41,10 +42,6 @@ export default function Dashboard() {
     ];
 
     // Load active iuran categories from localStorage
-    const defaultIuranTypes = [
-        { key: 'kebersihan', label: 'Kebersihan', amount: 15000 },
-        { key: 'satpam',     label: 'Satpam',     amount: 100000 },
-    ];
     const iuranTypes = (() => {
         try {
             const saved = localStorage.getItem('rt_iuran_types');

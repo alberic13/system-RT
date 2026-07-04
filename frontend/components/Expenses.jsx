@@ -8,6 +8,7 @@ import {
     deletePayment,
     getBillingStatus
 } from '../services/api';
+import { defaultIuranTypes } from '../config/iuran';
 import { 
     Plus, 
     Edit2, 
@@ -201,15 +202,9 @@ export default function Expenses() {
     const iuranTypes = (() => {
         try {
             const saved = localStorage.getItem('rt_iuran_types');
-            return saved ? JSON.parse(saved) : [
-                { key: 'kebersihan', label: 'Kebersihan', amount: 15000 },
-                { key: 'satpam',     label: 'Satpam',     amount: 100000 },
-            ];
+            return saved ? JSON.parse(saved) : defaultIuranTypes;
         } catch {
-            return [
-                { key: 'kebersihan', label: 'Kebersihan', amount: 15000 },
-                { key: 'satpam',     label: 'Satpam',     amount: 100000 },
-            ];
+            return defaultIuranTypes;
         }
     })();
 
