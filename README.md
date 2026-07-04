@@ -191,14 +191,3 @@ Akses aplikasi melalui browser Anda di:
 
 ---
 
-## 4. Arsitektur & Utilitas Frontend
-
-### Shared Utilities (`frontend/utils/phone.js`)
-| Fungsi | Kegunaan |
-|---|---|
-| `toWhatsAppUrl(phone)` | Konversi nomor lokal (08xx) ke URL `wa.me/62xx` |
-| `todayLocalISO()` | Tanggal hari ini dalam format `YYYY-MM-DD` berdasarkan waktu **lokal** (bukan UTC) |
-| `formatDateLocale(dateStr)` | Format tanggal `YYYY-MM-DD` ke string Indonesia, contoh: `5 Jul 2026` |
-
-### Konfigurasi Iuran (`frontend/config/iuran.js`)
-Menyimpan daftar jenis iuran default (`defaultIuranTypes`) yang digunakan sebagai fallback jika belum ada konfigurasi tersimpan di `localStorage`.
