@@ -183,7 +183,7 @@ export default function Residents() {
                         <table className="w-full border-collapse text-left text-sm text-slate-500">
                             <thead className="bg-slate-50 text-xs text-slate-700 uppercase font-semibold border-b border-slate-100">
                                 <tr>
-                                    <th className="px-6 py-4">Nama Lengkap</th>
+                                    <th className="px-6 py-4">Nama ( Kepala Keluarga)</th>
                                     <th className="px-6 py-4">Status Warga</th>
                                     <th className="px-6 py-4">Nomor Telepon</th>
                                     <th className="px-6 py-4">Status Pernikahan</th>

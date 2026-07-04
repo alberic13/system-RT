@@ -6,6 +6,7 @@ import {
     deletePayment
 } from '../services/api';
 import { defaultIuranTypes } from '../config/iuran';
+import { formatDateLocale, todayLocalISO } from '../utils/phone';
 import { 
     Plus, 
     User,
@@ -77,7 +78,7 @@ export default function Payments() {
         resident_name: '',
         type: 'kebersihan',
         year: new Date().getFullYear(),
-        payment_date: new Date().toISOString().split('T')[0]
+        payment_date: todayLocalISO()
     });
     const [selectedMonths, setSelectedMonths] = useState([]);
 
@@ -622,8 +623,7 @@ export default function Payments() {
                                                     return <span className="text-xs text-slate-400 italic">-</span>;
                                                 }
                                                 
-                                                const [year, month, day] = latestPayment.payment_date.split('-');
-                                                return `${day}/${month}/${year}`;
+                                                return formatDateLocale(latestPayment.payment_date);
                                             })()}
                                         </td>
                                         <td className="px-4 py-3 text-center">

@@ -9,6 +9,7 @@ import {
     getBillingStatus
 } from '../services/api';
 import { defaultIuranTypes } from '../config/iuran';
+import { todayLocalISO } from '../utils/phone';
 import { 
     Plus, 
     Edit2, 
@@ -38,7 +39,7 @@ export default function Expenses() {
     const [formData, setFormData] = useState({
         description: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0]
+        date: todayLocalISO()
     });
 
     const monthsList = [
@@ -115,7 +116,7 @@ export default function Expenses() {
         setFormData({
             description: '',
             amount: '',
-            date: new Date().toISOString().split('T')[0]
+            date: todayLocalISO()
         });
         setIsFormOpen(true);
     };
@@ -125,7 +126,7 @@ export default function Expenses() {
         setFormData({
             description: expense.description,
             amount: expense.amount,
-            date: new Date(expense.date).toISOString().split('T')[0]
+            date: expense.date ?? todayLocalISO()
         });
         setIsFormOpen(true);
     };

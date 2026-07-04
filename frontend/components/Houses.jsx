@@ -8,7 +8,7 @@ import {
     getResidents,
     deleteHouse
 } from '../services/api';
-import { toWhatsAppUrl } from '../utils/phone';
+import { toWhatsAppUrl, todayLocalISO } from '../utils/phone';
 import { 
     Plus, 
     Home, 
@@ -39,7 +39,7 @@ export default function Houses() {
     const [newHouseCode, setNewHouseCode] = useState('');
     const [assignData, setAssignData] = useState({
         resident_id: '',
-        start_date: new Date().toISOString().split('T')[0]
+        start_date: todayLocalISO()
     });
 
     useEffect(() => {
