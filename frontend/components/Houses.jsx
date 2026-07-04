@@ -6,9 +6,10 @@ import {
     assignResidentToHouse, 
     getHouseResidentHistory,
     getResidents,
-    deleteHouse
+    deleteHouse,
+    deleteResident
 } from '../services/api';
-import { toWhatsAppUrl, todayLocalISO } from '../utils/phone';
+import { toWhatsAppUrl, todayLocalISO, formatDateLocale } from '../utils/phone';
 import { 
     Plus, 
     Home, 
@@ -20,7 +21,8 @@ import {
     X,
     Calendar,
     ChevronRight,
-    AlertCircle
+    AlertCircle,
+    Trash2
 } from 'lucide-react';
 
 export default function Houses() {
@@ -137,9 +139,21 @@ export default function Houses() {
 
     const handleDeleteHouse = async () => {
         if (!selectedHouse) return;
-        if (!confirm(`Apakah Anda yakin ingin menghapus Unit Rumah ${selectedHouse.house_code}? Semua riwayat penghuni dan catatan iuran untuk rumah ini akan ikut terhapus permanen.`)) return;
+
+        const activeResident = selectedHouse.active_resident;
+        const residentNote = activeResident
+            ? ` Penghuni aktif (${activeResident.name}) juga akan ikut dihapus dari daftar warga.`
+            : '';
+
+        const confirmMsg = `Apakah Anda yakin ingin menghapus Unit Rumah ${selectedHouse.house_code}?${residentNote} Semua riwayat penghuni dan catatan iuran untuk rumah ini akan ikut terhapus permanen.`;
+        if (!confirm(confirmMsg)) return;
 
         try {
+            // Hapus penghuni aktif terlebih dahulu (jika ada)
+            if (activeResident?.id) {
+                await deleteResident(activeResident.id);
+            }
+
             await deleteHouse(selectedHouse.id);
             setIsAssignOpen(false);
             setSelectedHouse(null);
@@ -297,7 +311,7 @@ export default function Houses() {
                                                 Status: <span className="font-semibold uppercase text-[10px]">{selectedHouse.active_resident.status}</span>
                                             </p>
                                             <p className="text-xs text-slate-400 font-mono mt-1">
-                                                Menetap sejak: {selectedHouse.start_date}
+                                                Menetap sejak: {formatDateLocale(selectedHouse.start_date)}
                                             </p>
                                         </div>
                                     ) : (
@@ -328,7 +342,7 @@ export default function Houses() {
                                                             {hr.resident_name || hr.resident?.name}
                                                         </p>
                                                         <p className="text-[10px] text-slate-400">
-                                                            {hr.start_date} s/d {hr.end_date || 'Sekarang'}
+                                                            {formatDateLocale(hr.start_date)} s/d {hr.end_date ? formatDateLocale(hr.end_date) : 'Sekarang'}
                                                         </p>
                                                     </div>
                                                     {hr.is_active && (
@@ -429,20 +443,34 @@ export default function Houses() {
                                 </div>
                             )}
 
-                            <div className="flex justify-end items-center gap-2 pt-3 border-t border-slate-100">
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsAssignOpen(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition"
+                            <div className="flex justify-between items-center gap-2 pt-3 border-t border-slate-100">
+                                {/* Tombol Hapus Rumah — sisi kiri */}
+                                <button
+                                    type="button"
+                                    onClick={handleDeleteHouse}
+                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 rounded-xl transition"
+                                    title="Hapus unit rumah ini secara permanen"
                                 >
-                                    Batal
+                                    <Trash2 size={13} />
+                                    Hapus Rumah
                                 </button>
-                                <button 
-                                    type="submit"
-                                    className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition"
-                                >
-                                    Simpan Perubahan
-                                </button>
+
+                                {/* Tombol Batal & Simpan — sisi kanan */}
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsAssignOpen(false)}
+                                        className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button 
+                                        type="submit"
+                                        className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition"
+                                    >
+                                        Simpan Perubahan
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>

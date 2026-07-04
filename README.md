@@ -125,6 +125,13 @@ Ikuti langkah-langkah di bawah ini untuk menyiapkan aplikasi di lingkungan lokal
    php artisan storage:link
    ```
 
+7. Bersihkan cache konfigurasi Laravel jika diperlukan:
+   ```bash
+   php artisan config:clear
+   php artisan cache:clear
+   php artisan view:clear
+   ```
+
 ---
 
 ### Langkah 2: Instalasi Dependensi Frontend
@@ -156,20 +163,42 @@ Akses aplikasi melalui browser Anda di:
 
 1. **Dashboard Utama**:
    - Kartu KPI: Jumlah Warga, Unit Terisi/Kosong, Total Pemasukan Kas, Sisa Saldo Kas RT.
+   - **Okupansi Rumah otomatis**: Status hunian (Terisi/Kosong) diperbarui secara real-time mengikuti perubahan status penghuni aktif di unit rumah.
    - Grafik Interaktif (Pemasukan vs Pengeluaran) selama 12 bulan terakhir.
    - Daftar otomatis rumah yang menunggak (belum lunas) di bulan berjalan (otomatis diurutkan berdasarkan kode rumah secara alami).
+
 2. **Kelola Warga**:
    - Menambah & mengubah warga (Nama, Telepon, Status Pernikahan, Status Hubungan Tetap/Kontrak).
    - Unggah foto KTP warga secara aman dengan preview popup visual.
+
 3. **Kelola Hunian Rumah**:
    - Peta interaktif grid unit rumah berkode yang **otomatis terurut secara alami (natural order)** seperti `A-01, A-02 ... A-20` meskipun ada penambahan unit baru.
    - Dengan badge warna hijau untuk rumah yang terisi (status tetap), kuning untuk status kontrak, dan abu-abu untuk rumah yang kosong.
-   - Panel detail rumah: Menampilkan profil penghuni aktif saat ini & daftar riwayat penghuni masa lalu.
+   - Panel detail rumah: Menampilkan profil penghuni aktif saat ini & daftar riwayat penghuni masa lalu (dengan format tanggal Bahasa Indonesia, contoh: `5 Jul 2026`).
    - Fitur Asosiasi: Memasang penghuni baru atau mengosongkan rumah dengan otomatis mencatat tanggal mulai/selesai sewa.
+   - **Hapus Unit Rumah**: Tombol hapus tersedia di modal edit rumah. Menghapus unit secara permanen beserta penghuni aktif yang terhubung, riwayat hunian, dan catatan iuran terkait.
    - **Preservasi Riwayat**: Ketika data warga diubah atau dihapus, riwayat hunian di rumah tersebut tetap terjaga utuh berkat penyimpanan snapshot nama penghuni (`resident_name`).
+
 4. **Kelola Penerimaan Iuran**:
-   - Matriks Bulanan: Menampilkan status lunas/belum lunas untuk iuran Kebersihan dan Satpam per rumah (diurutkan berdasarkan kode rumah secara alami).
+   - Matriks Bulanan: Menampilkan status lunas/belum lunas untuk setiap jenis iuran per rumah (diurutkan berdasarkan kode rumah secara alami).
    - Input Iuran Massal: Mendukung pembayaran beberapa bulan sekaligus (contoh: langsung bayar 12 bulan untuk Iuran Kebersihan).
+   - **Jenis Iuran Dinamis**: Jenis iuran (label & nominal) dapat ditambah atau dihapus langsung dari antarmuka tanpa mengubah kode, disimpan di `localStorage`.
+   - **Format Tanggal Lokal**: Kolom TGL BAYAR dan semua tampilan tanggal menggunakan format Bahasa Indonesia (contoh: `5 Jul 2026`). Tanggal default otomatis mengikuti waktu lokal perangkat (bukan UTC).
+
 5. **Kas & Pengeluaran**:
    - Pencatatan pengeluaran kas RT (Keterangan, Nominal, Tanggal).
    - Buku Kas Bulanan: Laporan rinci ledger kas masuk & kas keluar untuk bulan tertentu.
+
+---
+
+## 4. Arsitektur & Utilitas Frontend
+
+### Shared Utilities (`frontend/utils/phone.js`)
+| Fungsi | Kegunaan |
+|---|---|
+| `toWhatsAppUrl(phone)` | Konversi nomor lokal (08xx) ke URL `wa.me/62xx` |
+| `todayLocalISO()` | Tanggal hari ini dalam format `YYYY-MM-DD` berdasarkan waktu **lokal** (bukan UTC) |
+| `formatDateLocale(dateStr)` | Format tanggal `YYYY-MM-DD` ke string Indonesia, contoh: `5 Jul 2026` |
+
+### Konfigurasi Iuran (`frontend/config/iuran.js`)
+Menyimpan daftar jenis iuran default (`defaultIuranTypes`) yang digunakan sebagai fallback jika belum ada konfigurasi tersimpan di `localStorage`.
