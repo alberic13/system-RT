@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
     getBillingStatus, 
     createPayment, 
-    getHouses
+    getHouses,
+    deletePayment
 } from '../services/api';
 import { 
     Plus, 
@@ -12,7 +13,8 @@ import {
     Info,
     Search,
     Trash2,
-    ChevronDown
+    ChevronDown,
+    Edit2
 } from 'lucide-react';
 
 export default function Payments() {
@@ -162,23 +164,86 @@ export default function Payments() {
         }
 
         try {
-            await createPayment({
-                house_id: recordForm.house_id,
-                resident_id: recordForm.resident_id,
-                type: recordForm.type,
-                months: selectedMonths,
-                year: recordForm.year,
-                payment_date: recordForm.payment_date
-            });
+            if (recordForm.type === 'all') {
+                for (const t of iuranTypes) {
+                    await createPayment({
+                        house_id: recordForm.house_id,
+                        resident_id: recordForm.resident_id,
+                        type: t.key,
+                        amount: t.amount,
+                        months: selectedMonths,
+                        year: recordForm.year,
+                        payment_date: recordForm.payment_date
+                    });
+                }
+            } else {
+                const selectedType = iuranTypes.find(t => t.key === recordForm.type);
+                const amount = selectedType ? selectedType.amount : 0;
+
+                await createPayment({
+                    house_id: recordForm.house_id,
+                    resident_id: recordForm.resident_id,
+                    type: recordForm.type,
+                    amount: amount,
+                    months: selectedMonths,
+                    year: recordForm.year,
+                    payment_date: recordForm.payment_date
+                });
+            }
 
             setIsRecordOpen(false);
             setSelectedMonths([]);
             
-            // Refresh matrix and history
+            // Refresh matrix
             loadBillingMatrix();
         } catch (error) {
             console.error("Error recording payment:", error);
             alert("Gagal mencatat pembayaran.");
+        }
+    };
+
+    const handleEditRow = (row) => {
+        setRecordForm(prev => ({
+            ...prev,
+            house_id: row.house_id.toString(),
+            resident_id: row.resident_id || '',
+            resident_name: row.resident_name || 'Tidak ada penghuni aktif'
+        }));
+        // Scroll to form nicely
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleDeletePaymentItem = async (paymentId) => {
+        if (!confirm('Apakah Anda yakin ingin menghapus pembayaran ini?')) return;
+        try {
+            await deletePayment(paymentId);
+            alert('Pembayaran berhasil dihapus.');
+            setDetailRow(null);
+            loadBillingMatrix();
+        } catch (error) {
+            console.error('Error deleting payment:', error);
+            alert('Gagal menghapus pembayaran.');
+        }
+    };
+
+    const handleDeleteRowAllPayments = async (row) => {
+        if (!row.payments || row.payments.length === 0) {
+            alert('Tidak ada pembayaran yang tercatat untuk rumah ini pada bulan yang dipilih.');
+            return;
+        }
+        
+        const confirmMsg = `Apakah Anda yakin ingin menghapus semua pembayaran untuk Rumah ${row.house_code} pada bulan ini?`;
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            for (const p of row.payments) {
+                await deletePayment(p.id);
+            }
+            alert('Pembayaran berhasil dihapus.');
+            loadBillingMatrix();
+        } catch (error) {
+            console.error('Error deleting payments:', error);
+            alert('Gagal menghapus pembayaran.');
         }
     };
 
@@ -189,6 +254,21 @@ export default function Payments() {
             minimumFractionDigits: 0
         }).format(num);
     };
+
+    // A house is fully paid if:
+    // 1. row.should_pay is true (occupied house)
+    // 2. They have paid all categories in iuranTypes
+    const uniquePaidHouses = billingData
+        .filter(row => {
+            if (!row.should_pay) return false;
+            return iuranTypes.every(type => 
+                row.payments?.some(p => p.type === type.key)
+            );
+        })
+        .map(row => row.house_code)
+        .sort();
+
+    const totalPaidHouses = uniquePaidHouses.length;
 
     return (
         <div className="space-y-6">
@@ -228,17 +308,36 @@ export default function Payments() {
                         {/* Jenis Iuran */}
                         <div>
                             <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Jenis Iuran</label>
-                            <select
-                                value={recordForm.type}
-                                onChange={(e) => setRecordForm(prev => ({ ...prev, type: e.target.value }))}
-                                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-800 bg-white"
-                            >
-                                {iuranTypes.map(t => (
-                                    <option key={t.key} value={t.key}>
-                                        {t.label} ({new Intl.NumberFormat('id-ID', { notation:'compact' }).format(t.amount)})
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="flex items-center gap-1.5">
+                                <select
+                                    value={recordForm.type}
+                                    onChange={(e) => setRecordForm(prev => ({ ...prev, type: e.target.value }))}
+                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-800 bg-white"
+                                >
+                                    <option value="all">Semua Kategori</option>
+                                    {iuranTypes.map(t => (
+                                        <option key={t.key} value={t.key}>
+                                            {t.label} ({new Intl.NumberFormat('id-ID', { notation:'compact' }).format(t.amount)})
+                                        </option>
+                                    ))}
+                                </select>
+                                {recordForm.type !== 'all' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (confirm(`Apakah Anda yakin ingin menghapus kategori iuran "${iuranTypes.find(t => t.key === recordForm.type)?.label}"?`)) {
+                                                const updated = iuranTypes.filter(t => t.key !== recordForm.type);
+                                                saveIuranTypes(updated);
+                                                setRecordForm(prev => ({ ...prev, type: updated[0]?.key || 'all' }));
+                                            }
+                                        }}
+                                        className="p-2 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 rounded-xl transition"
+                                        title="Hapus Kategori Ini"
+                                    >
+                                        <Trash2 size={15} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Penghuni */}
@@ -288,14 +387,14 @@ export default function Payments() {
                                 {selectedMonths.length === 12 ? 'Hapus Semua' : 'Pilih Semua'}
                             </button>
                         </div>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1.5">
+                        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1.5 bg-slate-50 p-3 rounded-xl border border-slate-100">
                             {monthsList.map(m => {
                                 const checked = selectedMonths.includes(m.val);
                                 return (
                                     <label key={m.val} className={`flex flex-col items-center justify-center p-2 rounded-lg border cursor-pointer text-[10px] font-semibold transition select-none ${
                                         checked
                                             ? 'bg-indigo-600 border-indigo-600 text-white'
-                                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-indigo-300'
+                                            : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300'
                                     }`}>
                                         <input
                                             type="checkbox"
@@ -396,12 +495,22 @@ export default function Payments() {
                 {/* Header dengan filter + search */}
                 <div className="p-5 border-b border-slate-100">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <h3 className="text-base font-bold text-slate-800">
-                            Informasi Pembayaran
-                            <span className="ml-2 text-indigo-600 font-semibold">
-                                — {monthsList.find(m => m.val === selectedMonth)?.name} {selectedYear}
-                            </span>
-                        </h3>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-slate-800 flex flex-wrap items-center gap-2">
+                                Informasi Pembayaran
+                                <span className="text-indigo-600 font-semibold">
+                                    — {monthsList.find(m => m.val === selectedMonth)?.name} {selectedYear}
+                                </span>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-800">
+                                    {totalPaidHouses} Rumah Lunas Semua Iuran
+                                </span>
+                            </h3>
+                            {totalPaidHouses > 0 && (
+                                <p className="text-[11px] text-slate-500 font-normal">
+                                    (Daftar Lunas: {uniquePaidHouses.join(', ')})
+                                </p>
+                            )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-2">
                             {/* Bulan */}
                             <div className="flex flex-col">
@@ -455,7 +564,14 @@ export default function Payments() {
                                 <tr>
                                     <th className="px-4 py-3">Rumah</th>
                                     <th className="px-4 py-3">Nama Penghuni</th>
-                                    <th className="px-4 py-3 text-center">Informasi</th>
+                                    <th className="px-4 py-3 text-center">Bulan</th>
+                                    {iuranTypes.map(t => (
+                                        <th key={t.key} className="px-4 py-3 text-center">
+                                            {t.label} ({new Intl.NumberFormat('id-ID', { notation:'compact' }).format(t.amount)})
+                                        </th>
+                                    ))}
+                                    <th className="px-4 py-3 text-center">Tgl Bayar</th>
+                                    <th className="px-4 py-3 text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -477,13 +593,52 @@ export default function Payments() {
                                                 <span className="text-slate-400 italic">Kosong</span>
                                             )}
                                         </td>
+                                        <td className="px-4 py-3 text-xs text-center font-medium text-slate-600">
+                                            {monthsList.find(m => m.val === selectedMonth)?.name} {selectedYear}
+                                        </td>
+                                        {iuranTypes.map(t => {
+                                            const payment = row.payments?.find(p => p.type === t.key);
+                                            return (
+                                                <td key={t.key} className="px-4 py-3 text-center text-xs">
+                                                    {!row.should_pay ? (
+                                                        <span className="text-slate-400 font-medium">N/A</span>
+                                                    ) : payment ? (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg">
+                                                            <CheckCircle size={10} className="text-emerald-600" /> Lunas
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-800 text-[11px] font-bold rounded-lg">
+                                                            <XCircle size={10} className="text-red-600" /> Belum
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                        {/* Tgl Bayar */}
+                                        <td className="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+                                            {(() => {
+                                                const latestPayment = row.payments
+                                                    ?.filter(p => p.payment_date)
+                                                    ?.sort((a, b) => b.id - a.id)[0];
+                                                
+                                                if (!latestPayment) {
+                                                    return <span className="text-xs text-slate-400 italic">-</span>;
+                                                }
+                                                
+                                                const [year, month, day] = latestPayment.payment_date.split('-');
+                                                return `${day}/${month}/${year}`;
+                                            })()}
+                                        </td>
                                         <td className="px-4 py-3 text-center">
-                                            <button
-                                                onClick={() => setDetailRow(row)}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
-                                            >
-                                                <Info size={12} /> Detail
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button
+                                                    onClick={() => handleDeleteRowAllPayments(row)}
+                                                    className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
+                                                    title="Hapus Semua Pembayaran Bulan Ini"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -492,100 +647,6 @@ export default function Payments() {
                     </div>
                 )}
             </div>
-
-
-            {/* Detail Payment Status Modal */}
-            {detailRow && (
-                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl border border-slate-100 overflow-hidden">
-                        {/* Header */}
-                        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                            <div>
-                                <h3 className="text-base font-bold text-slate-800">Detail Iuran — Rumah {detailRow.house_code}</h3>
-                                <p className="text-xs text-slate-400 mt-0.5">
-                                    {monthsList.find(m => m.val === selectedMonth)?.name} {selectedYear}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => setDetailRow(null)}
-                                className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition text-lg leading-none"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        {/* Penghuni Info */}
-                        <div className="px-5 pt-4">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Penghuni</p>
-                            <p className="text-sm font-semibold text-slate-800">
-                                {detailRow.resident_name || <span className="italic text-slate-400">Tidak ada penghuni</span>}
-                            </p>
-                        </div>
-
-                        {/* Status Cards */}
-                        <div className="p-5 space-y-3">
-                            {/* Kebersihan / Sampah */}
-                            <div className={`flex items-center justify-between p-4 rounded-xl border ${
-                                !detailRow.should_pay
-                                    ? 'bg-slate-50 border-slate-100'
-                                    : detailRow.kebersihan_lunas
-                                        ? 'bg-emerald-50 border-emerald-100'
-                                        : 'bg-red-50 border-red-100'
-                            }`}>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">🧹 Iuran Sampah</p>
-                                    <p className="text-[11px] text-slate-400 mt-0.5">Rp 15.000 / bulan</p>
-                                </div>
-                                {!detailRow.should_pay ? (
-                                    <span className="text-[10px] font-semibold text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-200">N/A</span>
-                                ) : detailRow.kebersihan_lunas ? (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg">
-                                        <CheckCircle size={12} /> Lunas
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-lg">
-                                        <XCircle size={12} /> Belum
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Satpam */}
-                            <div className={`flex items-center justify-between p-4 rounded-xl border ${
-                                !detailRow.should_pay
-                                    ? 'bg-slate-50 border-slate-100'
-                                    : detailRow.satpam_lunas
-                                        ? 'bg-emerald-50 border-emerald-100'
-                                        : 'bg-red-50 border-red-100'
-                            }`}>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">🛡️ Iuran Satpam</p>
-                                    <p className="text-[11px] text-slate-400 mt-0.5">Rp 100.000 / bulan</p>
-                                </div>
-                                {!detailRow.should_pay ? (
-                                    <span className="text-[10px] font-semibold text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-200">N/A</span>
-                                ) : detailRow.satpam_lunas ? (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg">
-                                        <CheckCircle size={12} /> Lunas
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-lg">
-                                        <XCircle size={12} /> Belum
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="px-5 pb-5">
-                            <button
-                                onClick={() => setDetailRow(null)}
-                                className="w-full py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
-                            >
-                                Tutup
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

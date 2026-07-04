@@ -22,7 +22,7 @@ function App() {
         { id: 'residents', name: 'Warga / Penghuni', icon: Users },
         { id: 'houses', name: 'Unit Rumah', icon: Home },
         { id: 'payments', name: 'Iuran Bulanan', icon: CreditCard },
-        { id: 'expenses', name: 'Kas & Pengeluaran', icon: FileSpreadsheet },
+        { id: 'expenses', name: 'Report Pemasukan & Pengeluaran', icon: FileSpreadsheet },
     ];
 
     const renderActiveComponent = () => {
@@ -52,8 +52,8 @@ function App() {
                         <Building size={20} />
                     </div>
                     <div>
-                        <h1 className="font-extrabold text-white text-base tracking-wide">RUKUN TETANGGA</h1>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Perumahan Elite</p>
+                        <h1 className="font-extrabold text-white text-base tracking-wide">Aplikasi Admin RT</h1>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Perumahan zalde</p>
                     </div>
                 </div>
 
@@ -82,7 +82,7 @@ function App() {
                 {/* Sidebar Footer */}
                 <div className="p-6 border-t border-slate-800 text-center text-xs text-slate-600">
                     <p className="font-semibold text-slate-500">RT-Admin Panel</p>
-                    <p className="mt-0.5 text-[10px]">Apprentice Skill Test</p>
+                    <p className="mt-0.5 text-[10px]">zalde</p>
                 </div>
             </aside>
 

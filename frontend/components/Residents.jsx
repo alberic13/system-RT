@@ -146,11 +146,22 @@ export default function Residents() {
         return `https://wa.me/${number}`;
     };
 
+    const totalTetap = residents.filter(r => r.status === 'tetap').length;
+    const totalKontrak = residents.filter(r => r.status === 'kontrak').length;
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Daftar Warga/Penghuni</h1>
+                    <h1 className="text-2xl font-bold text-slate-800 flex flex-wrap items-center gap-2.5">
+                        Daftar Warga/Penghuni
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> {totalTetap} Tetap
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> {totalKontrak} Kontrak
+                        </span>
+                    </h1>
                     <p className="text-slate-500">Kelola informasi pribadi warga perumahan, status, dan dokumen KTP.</p>
                 </div>
                 <button 

@@ -6,7 +6,7 @@ Aplikasi ini menggunakan konfigurasi **Single-Server**, di mana React dibundel l
 
 ---
 
-## 1. Entity Relationship Diagram (ERD)
+### 1. Entity Relationship Diagram (ERD)
 
 Berikut adalah skema database MySQL yang digunakan (dirender menggunakan sintaks Mermaid):
 
@@ -16,7 +16,7 @@ erDiagram
         int id PK
         string name
         string id_card_photo
-        enum status
+        enum status "tetap, kontrak"
         string phone
         boolean is_married
         timestamp created_at
@@ -26,7 +26,7 @@ erDiagram
     houses {
         int id PK
         string house_code
-        enum status
+        enum status "dihuni, tidak_dihuni"
         timestamp created_at
         timestamp updated_at
     }
@@ -34,7 +34,8 @@ erDiagram
     house_residents {
         int id PK
         int house_id FK
-        int resident_id FK
+        int resident_id FK "nullable (SET NULL)"
+        string resident_name "snapshot nama"
         boolean is_active
         date start_date
         date end_date
@@ -46,12 +47,13 @@ erDiagram
         int id PK
         int house_id FK
         int resident_id FK
-        enum type
+        string type "kebersihan, satpam, dll"
         int amount
         int month
         int year
         date payment_date
-        enum status
+        enum status "lunas, belum_lunas"
+        string payment_proof "nullable"
         timestamp created_at
         timestamp updated_at
     }
@@ -66,36 +68,41 @@ erDiagram
     }
 
     houses ||--o{ house_residents : "tracks historical occupants"
-    residents ||--o{ house_residents : "occupies"
+    residents ||--o{ house_residents : "occupies (SET NULL on delete)"
     houses ||--o{ payments : "pays for unit"
     residents ||--o{ payments : "makes payment"
 ```
 
+> 📌 **Catatan Desain Database:**
+> Kolom `resident_id` pada tabel `house_residents` dikonfigurasi sebagai **`SET NULL`** jika warga dihapus, dengan nama lengkap warga dibackup sebagai snapshot di kolom `resident_name`. Desain ini menjamin integritas data sehingga **riwayat hunian rumah tidak akan hilang atau berubah** meskipun data warga diubah (nama disinkronkan) atau dihapus secara permanen dari sistem.
+
 ---
 
-## 2. Panduan Instalasi & Cara Menjalankan (Single-Server)
+## 2. Panduan Instalasi & Uji Coba Cepat
+
+Ikuti langkah-langkah di bawah ini untuk menyiapkan aplikasi di lingkungan lokal Anda (misalnya menggunakan XAMPP/Laragon):
 
 ### Prasyarat Sistem:
-- PHP >= 8.2 (Disertai ekstensi pdo_mysql, gd, dll)
-- Composer >= 2.x
-- Node.js >= 18.x & NPM
-- MySQL (XAMPP / Laragon)
+- **PHP >= 8.2** (pastikan ekstensi `pdo_mysql`, `fileinfo`, dan `gd` aktif)
+- **Composer >= 2.x**
+- **Node.js >= 18.x** & **NPM**
+- **MySQL / MariaDB** (melalui XAMPP, Laragon, atau instalasi mandiri)
 
 ---
 
-### Langkah 1: Setup Lingkungan
-1. Salin file lingkungan dan pasang dependensi PHP:
+### Langkah 1: Setup Lingkungan & Database
+1. Buka terminal/command prompt di direktori project, lalu salin file `.env` dan pasang dependensi PHP:
    ```bash
    copy .env.example .env
    composer install
    ```
 
-2. Generate application key:
+2. Jalankan perintah pembuatan application key Laravel:
    ```bash
    php artisan key:generate
    ```
 
-3. Konfigurasi `.env` Anda dengan kredensial MySQL local:
+3. Sesuaikan konfigurasi database Anda di dalam file `.env`:
    ```env
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
@@ -105,23 +112,23 @@ erDiagram
    DB_PASSWORD=
    ```
 
-4. Buat database di MySQL (misal lewat phpMyAdmin) dengan nama `system_rt`.
+4. Buat database baru bernama `system_rt` di MySQL Anda (melalui phpMyAdmin atau client database lainnya).
 
-5. Jalankan migrasi tabel beserta data seeders awal:
+5. Jalankan migrasi tabel beserta pengisian data uji coba awal (seeder):
    ```bash
    php artisan migrate:fresh --seed
    ```
-   *Catatan: Seeders akan membuat 20 rumah, data warga, history hunian, transaksi iuran 6 bulan terakhir, serta log pengeluaran bulanan secara otomatis agar statistik dashboard langsung terisi.*
+   *Catatan: Database Seeder akan otomatis membuat 20 unit rumah (A-01 sampai A-20), data warga, riwayat hunian, catatan iuran wajib untuk 6 bulan terakhir, serta log pengeluaran agar grafik dashboard langsung tampil informatif.*
 
-6. Buat link storage untuk akses foto KTP:
+6. Buat link storage agar foto KTP warga dapat diakses di browser:
    ```bash
    php artisan storage:link
    ```
 
 ---
 
-### Langkah 2: Instalasi Dependensi Node & Build Aset
-Pasang dependensi Node dan compile file React langsung ke folder public Laravel:
+### Langkah 2: Instalasi Dependensi Frontend
+Aplikasi ini berjalan dengan bundling terpadu. Jalankan perintah berikut untuk menginstal dependensi JavaScript dan mem-build aset frontend:
 ```bash
 npm install
 npm run build
@@ -129,19 +136,19 @@ npm run build
 
 ---
 
-### Langkah 3: Jalankan Server Tunggal
-Untuk menjalankan aplikasi, Anda **hanya perlu menjalankan 1 server saja**:
+### Langkah 3: Menjalankan Server & Uji Coba
+Untuk menjalankan aplikasi, Anda **cukup menjalankan satu perintah server Laravel saja**:
 ```bash
 php artisan serve
 ```
 
-Buka browser Anda dan akses:
+Akses aplikasi melalui browser Anda di:
 👉 **[http://127.0.0.1:8000](http://127.0.0.1:8000)**
 
-*Tips Pengembangan (Development): Jika Anda sedang mengubah kode CSS/React dan ingin tampilan langsung ter-update secara otomatis di browser tanpa ketik `npm run build` berulang kali, jalankan perintah watcher ini di terminal kedua:*
-```bash
-npm run dev
-```
+> 💡 **Tips Pengembangan (Development):** Jika Anda ingin memodifikasi file React/CSS di folder `frontend` dan melihat perubahannya langsung secara real-time di browser tanpa perlu menjalankan `npm run build` berulang kali, jalankan perintah watcher berikut di terminal kedua:
+> ```bash
+> npm run dev
+> ```
 
 ---
 
@@ -150,16 +157,18 @@ npm run dev
 1. **Dashboard Utama**:
    - Kartu KPI: Jumlah Warga, Unit Terisi/Kosong, Total Pemasukan Kas, Sisa Saldo Kas RT.
    - Grafik Interaktif (Pemasukan vs Pengeluaran) selama 12 bulan terakhir.
-   - Daftar otomatis rumah yang menunggak (belum lunas) di bulan berjalan.
+   - Daftar otomatis rumah yang menunggak (belum lunas) di bulan berjalan (otomatis diurutkan berdasarkan kode rumah secara alami).
 2. **Kelola Warga**:
-   - Menambah & mengubah warga (Nama, Telepon, Status Nikah, Status Hubungan Tetap/Kontrak).
+   - Menambah & mengubah warga (Nama, Telepon, Status Pernikahan, Status Hubungan Tetap/Kontrak).
    - Unggah foto KTP warga secara aman dengan preview popup visual.
 3. **Kelola Hunian Rumah**:
-   - Peta interaktif grid 20 unit rumah berkode A-01 s/d A-20 (hijau = terisi, abu-abu = kosong).
+   - Peta interaktif grid unit rumah berkode yang **otomatis terurut secara alami (natural order)** seperti `A-01, A-02 ... A-20` meskipun ada penambahan unit baru.
+   - Dengan badge warna hijau untuk rumah yang terisi (status tetap), kuning untuk status kontrak, dan abu-abu untuk rumah yang kosong.
    - Panel detail rumah: Menampilkan profil penghuni aktif saat ini & daftar riwayat penghuni masa lalu.
    - Fitur Asosiasi: Memasang penghuni baru atau mengosongkan rumah dengan otomatis mencatat tanggal mulai/selesai sewa.
+   - **Preservasi Riwayat**: Ketika data warga diubah atau dihapus, riwayat hunian di rumah tersebut tetap terjaga utuh berkat penyimpanan snapshot nama penghuni (`resident_name`).
 4. **Kelola Penerimaan Iuran**:
-   - Matriks Bulanan: Menampilkan status lunas/belum lunas untuk iuran Kebersihan dan Satpam per rumah.
+   - Matriks Bulanan: Menampilkan status lunas/belum lunas untuk iuran Kebersihan dan Satpam per rumah (diurutkan berdasarkan kode rumah secara alami).
    - Input Iuran Massal: Mendukung pembayaran beberapa bulan sekaligus (contoh: langsung bayar 12 bulan untuk Iuran Kebersihan).
 5. **Kas & Pengeluaran**:
    - Pencatatan pengeluaran kas RT (Keterangan, Nominal, Tanggal).

@@ -4,7 +4,9 @@ import {
     createExpense, 
     updateExpense, 
     deleteExpense,
-    getMonthlyReport
+    getPayments,
+    deletePayment,
+    getBillingStatus
 } from '../services/api';
 import { 
     Plus, 
@@ -16,21 +18,18 @@ import {
     Calendar,
     FileText,
     ArrowUpRight,
-    ArrowDownRight
+    ArrowDownRight,
+    Home
 } from 'lucide-react';
 
 export default function Expenses() {
-    const [expenses, setExpenses] = useState([]);
-    const [loadingExpenses, setLoadingExpenses] = useState(true);
-    
-    // View tab toggler: 'expenses' or 'reports'
-    const [subTab, setSubTab] = useState('expenses');
+    const [transactions, setTransactions] = useState([]);
+    const [loadingTransactions, setLoadingTransactions] = useState(true);
+    const [billingData, setBillingData] = useState([]);
 
-    // Report states
+    // Filter states
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [reportData, setReportData] = useState(null);
-    const [loadingReport, setLoadingReport] = useState(false);
 
     // Expense Form Modal states
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -49,34 +48,64 @@ export default function Expenses() {
     ];
 
     useEffect(() => {
-        if (subTab === 'expenses') {
-            loadExpensesList();
-        } else {
-            loadMonthlyReportData();
-        }
-    }, [subTab, selectedMonth, selectedYear]);
+        loadTransactionsList();
+        loadBillingData();
+    }, [selectedMonth, selectedYear]);
 
-    const loadExpensesList = async () => {
-        setLoadingExpenses(true);
+    const loadTransactionsList = async () => {
+        setLoadingTransactions(true);
         try {
-            const res = await getExpenses();
-            setExpenses(res.data);
+            const [paymentsRes, expensesRes] = await Promise.all([
+                getPayments(),
+                getExpenses()
+            ]);
+            
+            const monthsIndo = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
+            
+            const paymentItems = paymentsRes.data.map(p => ({
+                id: `payment_${p.id}`,
+                originalId: p.id,
+                isIncome: true,
+                description: `Pemasukan - Iuran ${p.type.toUpperCase()} (Rumah ${p.house?.house_code || '-'}, Periode ${monthsIndo[p.month - 1]} ${p.year})`,
+                amount: p.amount,
+                date: p.payment_date,
+                month: p.month,
+                year: p.year,
+                house_code: p.house?.house_code || '-'
+            }));
+            
+            const expenseItems = expensesRes.data.map(e => ({
+                id: `expense_${e.id}`,
+                originalId: e.id,
+                isIncome: false,
+                description: `Pengeluaran - ${e.description}`,
+                amount: e.amount,
+                date: e.date,
+                month: e.date ? parseInt(e.date.split('-')[1]) : new Date().getMonth() + 1,
+                year: e.date ? parseInt(e.date.split('-')[0]) : new Date().getFullYear()
+            }));
+            
+            const combined = [...paymentItems, ...expenseItems].sort((a, b) => {
+                return new Date(b.date) - new Date(a.date);
+            });
+            
+            setTransactions(combined);
         } catch (error) {
-            console.error("Error loading expenses:", error);
+            console.error("Error loading transactions:", error);
         } finally {
-            setLoadingExpenses(false);
+            setLoadingTransactions(false);
         }
     };
 
-    const loadMonthlyReportData = async () => {
-        setLoadingReport(true);
+    const loadBillingData = async () => {
         try {
-            const res = await getMonthlyReport(selectedMonth, selectedYear);
-            setReportData(res.data);
+            const res = await getBillingStatus(selectedMonth, selectedYear);
+            setBillingData(res.data);
         } catch (error) {
-            console.error("Error loading report:", error);
-        } finally {
-            setLoadingReport(false);
+            console.error("Error loading billing status:", error);
         }
     };
 
@@ -114,21 +143,33 @@ export default function Expenses() {
                 await createExpense(formData);
             }
             setIsFormOpen(false);
-            loadExpensesList();
+            loadTransactionsList();
+            loadBillingData();
         } catch (error) {
             console.error("Error saving expense:", error);
             alert("Gagal menyimpan pengeluaran.");
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm("Apakah Anda yakin ingin menghapus catatan pengeluaran ini?")) return;
+    const handleDelete = async (item) => {
+        const isIncome = item.isIncome;
+        const msg = isIncome 
+            ? "Apakah Anda yakin ingin menghapus catatan pemasukan iuran ini?" 
+            : "Apakah Anda yakin ingin menghapus catatan pengeluaran ini?";
+        if (!confirm(msg)) return;
+        
         try {
-            await deleteExpense(id);
-            loadExpensesList();
+            const targetId = item.originalId || item.id;
+            if (isIncome) {
+                await deletePayment(targetId);
+            } else {
+                await deleteExpense(targetId);
+            }
+            loadTransactionsList();
+            loadBillingData();
         } catch (error) {
-            console.error("Error deleting expense:", error);
-            alert("Gagal menghapus pengeluaran.");
+            console.error("Error deleting transaction:", error);
+            alert("Gagal menghapus catatan.");
         }
     };
 
@@ -140,241 +181,237 @@ export default function Expenses() {
         }).format(num);
     };
 
+    // Client-side filtering logic based on selectedMonth and selectedYear
+    const filteredTransactions = transactions.filter(t => {
+        return t.month === selectedMonth && t.year === selectedYear;
+    });
+
+    // Client-side summaries computed on the fly
+    const totalIncome = filteredTransactions
+        .filter(t => t.isIncome)
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+    const totalExpense = filteredTransactions
+        .filter(t => !t.isIncome)
+        .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+    const netBalance = totalIncome - totalExpense;
+
+    // Load active iuran categories from localStorage
+    const iuranTypes = (() => {
+        try {
+            const saved = localStorage.getItem('rt_iuran_types');
+            return saved ? JSON.parse(saved) : [
+                { key: 'kebersihan', label: 'Kebersihan', amount: 15000 },
+                { key: 'satpam',     label: 'Satpam',     amount: 100000 },
+            ];
+        } catch {
+            return [
+                { key: 'kebersihan', label: 'Kebersihan', amount: 15000 },
+                { key: 'satpam',     label: 'Satpam',     amount: 100000 },
+            ];
+        }
+    })();
+
+    // A house is fully paid if:
+    // 1. row.should_pay is true (occupied house)
+    // 2. They have paid all categories in iuranTypes
+    const uniquePaidHouses = billingData
+        .filter(row => {
+            if (!row.should_pay) return false;
+            return iuranTypes.every(type => 
+                row.payments?.some(p => p.type === type.key)
+            );
+        })
+        .map(row => row.house_code)
+        .sort();
+
+    const totalPaidHouses = uniquePaidHouses.length;
+
+    const selectedMonthName = monthsList.find(m => m.val === selectedMonth)?.name || '';
+
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Keuangan & Pengeluaran RT</h1>
-                    <p className="text-slate-500">Kelola pengeluaran bulanan dan pantau laporan kas pemasukan vs pengeluaran.</p>
+                    <h1 className="text-2xl font-extrabold text-slate-800">
+                        Report Pemasukan & Pengeluaran RT <span className="text-indigo-600 font-semibold">— {selectedMonthName} {selectedYear}</span>
+                    </h1>
+                    <p className="text-xs text-slate-500">Kelola pengeluaran bulanan dan pantau laporan kas masuk & keluar warga.</p>
                 </div>
-                {subTab === 'expenses' && (
-                    <button 
-                        onClick={openAddModal}
-                        className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition self-start sm:self-auto"
-                    >
-                        <Plus size={16} /> Catat Pengeluaran
-                    </button>
-                )}
-            </div>
-
-            {/* Sub-tab Switcher */}
-            <div className="flex border-b border-slate-200">
-                <button
-                    onClick={() => setSubTab('expenses')}
-                    className={`pb-3 text-sm font-semibold border-b-2 px-4 transition ${
-                        subTab === 'expenses' 
-                            ? 'border-indigo-600 text-indigo-600' 
-                            : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
+                <button 
+                    onClick={openAddModal}
+                    className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition self-start sm:self-auto shadow-lg shadow-indigo-600/10"
                 >
-                    Pengeluaran RT (CRUD)
-                </button>
-                <button
-                    onClick={() => setSubTab('reports')}
-                    className={`pb-3 text-sm font-semibold border-b-2 px-4 transition ${
-                        subTab === 'reports' 
-                            ? 'border-indigo-600 text-indigo-600' 
-                            : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                >
-                    Laporan Bulanan & Buku Kas
+                    <Plus size={14} /> Catat Pengeluaran
                 </button>
             </div>
 
-            {/* View Render */}
-            {subTab === 'expenses' ? (
-                /* Expenses CRUD List */
-                loadingExpenses ? (
-                    <div className="flex items-center justify-center min-h-[300px]">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            {/* Selectors and Monthly Label in one box, matching reference image */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide flex flex-wrap items-center gap-2">
+                        Filter Riwayat Transaksi
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-800">
+                            {totalPaidHouses} Rumah Lunas Semua Iuran
+                        </span>
+                    </h3>
+                    <p className="text-xs text-slate-400 font-medium">
+                        Menampilkan data untuk periode <span className="font-semibold text-slate-600">{selectedMonthName} {selectedYear}</span>
+                        {totalPaidHouses > 0 && (
+                            <span className="ml-2 text-slate-500 font-normal">
+                                (Daftar Lunas: {uniquePaidHouses.join(', ')})
+                            </span>
+                        )}
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Bulan</label>
+                        <select 
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                            className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500 text-slate-800 font-medium"
+                        >
+                            {monthsList.map(m => (
+                                <option key={m.val} value={m.val}>{m.name}</option>
+                            ))}
+                        </select>
                     </div>
-                ) : (
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full border-collapse text-left text-sm text-slate-500">
-                                <thead className="bg-slate-50 text-xs text-slate-700 uppercase font-semibold border-b border-slate-100">
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tahun</label>
+                        <input 
+                            type="number" 
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                            className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 w-24 font-medium"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Metrics cards for the filtered month */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Month Income */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <TrendingUp size={20} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-slate-400">Total Pemasukan</p>
+                        <h3 className="text-lg font-extrabold text-slate-800">{formatIDR(totalIncome)}</h3>
+                    </div>
+                </div>
+
+                {/* Month Expense */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                    <div className="p-3 bg-red-50 text-red-600 rounded-xl">
+                        <TrendingDown size={20} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-slate-400">Total Pengeluaran</p>
+                        <h3 className="text-lg font-extrabold text-slate-800">{formatIDR(totalExpense)}</h3>
+                    </div>
+                </div>
+
+                {/* Net Balance */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                    <div className={`p-3 rounded-xl ${
+                        netBalance >= 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'
+                    }`}>
+                        <DollarSign size={20} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-slate-400">Selisih Kas Netto</p>
+                        <h3 className={`text-lg font-extrabold ${
+                            netBalance >= 0 ? 'text-indigo-600' : 'text-red-600'
+                        }`}>
+                            {formatIDR(netBalance)}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            {/* Unified Transaction CRUD List (Filtered log) */}
+            {loadingTransactions ? (
+                <div className="flex items-center justify-center min-h-[300px]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+                </div>
+            ) : (
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-left text-sm text-slate-500">
+                            <thead className="bg-slate-50 text-xs text-slate-700 uppercase font-semibold border-b border-slate-100">
+                                <tr>
+                                    <th className="px-6 py-4">Keterangan Transaksi</th>
+                                    <th className="px-6 py-4 text-center">Tipe</th>
+                                    <th className="px-6 py-4">Nominal</th>
+                                    <th className="px-6 py-4">Tanggal Transaksi</th>
+                                    <th className="px-6 py-4 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredTransactions.length === 0 ? (
                                     <tr>
-                                        <th className="px-6 py-4">Keterangan Pengeluaran</th>
-                                        <th className="px-6 py-4">Nominal</th>
-                                        <th className="px-6 py-4">Tanggal Pengeluaran</th>
-                                        <th className="px-6 py-4 text-right">Aksi</th>
+                                        <td colSpan="5" className="px-6 py-10 text-center text-slate-400">
+                                            Belum ada catatan transaksi masuk atau keluar untuk periode ini.
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {expenses.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="4" className="px-6 py-10 text-center text-slate-400">
-                                                Belum ada catatan pengeluaran.
+                                ) : (
+                                    filteredTransactions.map(item => (
+                                        <tr key={item.id} className="hover:bg-slate-50/50">
+                                            <td className="px-6 py-4 font-semibold text-slate-800">{item.description}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold rounded-lg ${
+                                                    item.isIncome 
+                                                        ? 'bg-emerald-100 text-emerald-800' 
+                                                        : 'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {item.isIncome ? 'Pemasukan' : 'Pengeluaran'}
+                                                </span>
                                             </td>
-                                        </tr>
-                                    ) : (
-                                        expenses.map(exp => (
-                                            <tr key={exp.id} className="hover:bg-slate-50/50">
-                                                <td className="px-6 py-4 font-semibold text-slate-800">{exp.description}</td>
-                                                <td className="px-6 py-4 font-mono font-bold text-red-600">{formatIDR(exp.amount)}</td>
-                                                <td className="px-6 py-4">
-                                                    {new Date(exp.date).toLocaleDateString('id-ID', {
-                                                        year: 'numeric', month: 'long', day: 'numeric'
-                                                    })}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-2">
+                                            <td className={`px-6 py-4 font-mono font-bold ${
+                                                item.isIncome ? 'text-emerald-600' : 'text-red-600'
+                                            }`}>
+                                                {item.isIncome ? '+' : '-'}{formatIDR(item.amount)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {new Date(item.date).toLocaleDateString('id-ID', {
+                                                    year: 'numeric', month: 'long', day: 'numeric'
+                                                })}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    {!item.isIncome && (
                                                         <button 
-                                                            onClick={() => openEditModal(exp)}
+                                                            onClick={() => openEditModal({
+                                                                id: item.originalId,
+                                                                description: item.description.replace('Pengeluaran - ', ''),
+                                                                amount: item.amount,
+                                                                date: item.date
+                                                            })}
                                                             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
                                                             title="Edit Pengeluaran"
                                                         >
                                                             <Edit2 size={16} />
                                                         </button>
-                                                        <button 
-                                                            onClick={() => handleDelete(exp.id)}
-                                                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg transition"
-                                                            title="Hapus Pengeluaran"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => handleDelete(item)}
+                                                        className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg transition"
+                                                        title={item.isIncome ? 'Hapus Pemasukan' : 'Hapus Pengeluaran'}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
-                )
-            ) : (
-                /* Financial Monthly Report */
-                <div className="space-y-6">
-                    {/* Selectors */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap items-center gap-4">
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pilih Bulan</label>
-                            <select 
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500 text-slate-800"
-                            >
-                                {monthsList.map(m => (
-                                    <option key={m.val} value={m.val}>{m.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pilih Tahun</label>
-                            <input 
-                                type="number" 
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                                className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 w-24"
-                            />
-                        </div>
-                    </div>
-
-                    {loadingReport ? (
-                        <div className="flex items-center justify-center min-h-[300px]">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
-                        </div>
-                    ) : reportData ? (
-                        <div className="space-y-6">
-                            {/* Summary cards for this month */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                {/* Month Income */}
-                                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
-                                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                                        <TrendingUp size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-slate-400">Total Pemasukan</p>
-                                        <h3 className="text-lg font-extrabold text-slate-800">{formatIDR(reportData.total_income)}</h3>
-                                    </div>
-                                </div>
-
-                                {/* Month Expense */}
-                                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
-                                    <div className="p-3 bg-red-50 text-red-600 rounded-xl">
-                                        <TrendingDown size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-slate-400">Total Pengeluaran</p>
-                                        <h3 className="text-lg font-extrabold text-slate-800">{formatIDR(reportData.total_expense)}</h3>
-                                    </div>
-                                </div>
-
-                                {/* Net Balance */}
-                                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
-                                    <div className={`p-3 rounded-xl ${
-                                        reportData.balance >= 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'
-                                    }`}>
-                                        <DollarSign size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-slate-400">Selisih Kas Netto</p>
-                                        <h3 className={`text-lg font-extrabold ${
-                                            reportData.balance >= 0 ? 'text-indigo-600' : 'text-red-600'
-                                        }`}>
-                                            {formatIDR(reportData.balance)}
-                                        </h3>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Detailed Ledger List */}
-                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                                <h3 className="text-base font-bold text-slate-800 mb-4">Laporan Buku Kas Detail</h3>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-sm text-slate-500 border-collapse">
-                                        <thead className="bg-slate-50 text-xs text-slate-700 uppercase font-semibold border-b border-slate-100">
-                                            <tr>
-                                                <th className="px-4 py-3">Tanggal</th>
-                                                <th className="px-4 py-3">Tipe</th>
-                                                <th className="px-4 py-3">Rumah</th>
-                                                <th className="px-4 py-3">Warga</th>
-                                                <th className="px-4 py-3">Keterangan</th>
-                                                <th className="px-4 py-3 text-right">Nominal</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {reportData.ledger.length === 0 ? (
-                                                <tr>
-                                                    <td colSpan="6" className="px-4 py-8 text-center text-slate-400">
-                                                        Tidak ada aktivitas keuangan di bulan ini.
-                                                    </td>
-                                                </tr>
-                                            ) : (
-                                                reportData.ledger.map((item, idx) => {
-                                                    const isIncome = item.type.startsWith('Pemasukan');
-                                                    return (
-                                                        <tr key={idx} className="hover:bg-slate-50/50">
-                                                            <td className="px-4 py-3 font-mono font-medium">{new Date(item.date).toLocaleDateString('id-ID')}</td>
-                                                            <td className="px-4 py-3">
-                                                                <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold ${
-                                                                    isIncome 
-                                                                        ? 'bg-emerald-50 text-emerald-700' 
-                                                                        : 'bg-red-50 text-red-700'
-                                                                }`}>
-                                                                    {isIncome ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-                                                                    {isIncome ? 'Pemasukan' : 'Pengeluaran'}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-4 py-3 font-semibold">{item.house_code}</td>
-                                                            <td className="px-4 py-3 text-xs">{item.resident_name}</td>
-                                                            <td className="px-4 py-3 font-medium text-slate-700">{item.description}</td>
-                                                            <td className={`px-4 py-3 text-right font-bold font-mono ${
-                                                                isIncome ? 'text-emerald-600' : 'text-red-600'
-                                                            }`}>
-                                                                {isIncome ? '+' : '-'}{formatIDR(item.amount)}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    ) : null}
                 </div>
             )}
 

@@ -11,6 +11,7 @@ class HouseResident extends Model
     protected $fillable = [
         'house_id',
         'resident_id',
+        'resident_name',   // snapshot nama penghuni saat assignment
         'is_active',
         'start_date',
         'end_date'
@@ -27,8 +28,22 @@ class HouseResident extends Model
         return $this->belongsTo(House::class);
     }
 
+    /**
+     * Relasi ke Resident (nullable karena penghuni bisa dihapus,
+     * tapi riwayat tetap tersimpan via resident_name).
+     */
     public function resident()
     {
         return $this->belongsTo(Resident::class);
     }
+
+    /**
+     * Nama penghuni yang akan ditampilkan:
+     * pakai nama dari relasi jika masih ada, fallback ke snapshot resident_name.
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->resident?->name ?? $this->resident_name ?? '(Penghuni Dihapus)';
+    }
 }
+

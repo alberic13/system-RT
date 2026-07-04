@@ -26,11 +26,13 @@ class PaymentController extends Controller
         $validated = $request->validate([
             'house_id' => 'required|exists:houses,id',
             'resident_id' => 'required|exists:residents,id',
-            'type' => 'required|in:kebersihan,satpam',
+            'type' => 'required|string',
+            'amount' => 'nullable|integer',
             'months' => 'required|array', // e.g. [1, 2, 3]
             'months.*' => 'integer|between:1,12',
             'year' => 'required|integer|min:2000|max:2090',
             'payment_date' => 'required|date',
+            'payment_proof' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:4096', // max 4MB
         ]);
 
         $houseId = $validated['house_id'];
@@ -38,7 +40,16 @@ class PaymentController extends Controller
         $type = $validated['type'];
         $year = $validated['year'];
         $paymentDate = Carbon::parse($validated['payment_date']);
-        $amount = ($type === 'kebersihan') ? 15000 : 100000;
+        
+        // Handle file upload
+        $paymentProof = null;
+        if ($request->hasFile('payment_proof')) {
+            $path = $request->file('payment_proof')->store('bukti_bayar', 'public');
+            $paymentProof = '/storage/' . $path;
+        }
+
+        // Dynamic amount lookup
+        $amount = $validated['amount'] ?? (($type === 'kebersihan') ? 15000 : (($type === 'satpam') ? 100000 : 0));
 
         $createdPayments = [];
 
@@ -48,6 +59,7 @@ class PaymentController extends Controller
                 ->where('type', $type)
                 ->where('month', $month)
                 ->where('year', $year)
+                ->where('status', 'lunas')
                 ->exists();
 
             if ($exists) {
@@ -62,7 +74,8 @@ class PaymentController extends Controller
                 'month' => $month,
                 'year' => $year,
                 'payment_date' => $paymentDate,
-                'status' => 'lunas'
+                'status' => 'lunas',
+                'payment_proof' => $paymentProof
             ]);
 
             $createdPayments[] = $payment;
@@ -79,31 +92,40 @@ class PaymentController extends Controller
         $month = intval($request->query('month', Carbon::now()->month));
         $year = intval($request->query('year', Carbon::now()->year));
 
-        $houses = House::with(['activeResidentRelation.resident', 'payments'])->get();
+        $houses = House::with(['activeResidentRelation.resident', 'payments'])
+            ->get()
+            ->sortBy('house_code', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
 
         $billingData = $houses->map(function ($house) use ($month, $year) {
             // Check if the house was occupied (dihuni) in this month/year
-            // For simplicity, a house is occupied if it currently has an active resident,
-            // or if it had a resident during that period.
             $activeResidency = $house->activeResidentRelation;
             $resident = $activeResidency ? $activeResidency->resident : null;
 
             $shouldPay = ($house->status === 'dihuni' && $resident !== null);
 
-            // Check if payments exist for this month/year
-            $kebersihanPaid = $house->payments
-                ->where('type', 'kebersihan')
+            // Fetch all payments for this house in this month/year
+            $payments = $house->payments
                 ->where('month', $month)
                 ->where('year', $year)
                 ->where('status', 'lunas')
-                ->first();
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'type' => $p->type,
+                        'amount' => $p->amount,
+                        'month' => $p->month,
+                        'year' => $p->year,
+                        'payment_date' => $p->payment_date ? $p->payment_date->format('Y-m-d') : null,
+                        'payment_proof' => $p->payment_proof,
+                    ];
+                })
+                ->values()
+                ->toArray();
 
-            $satpamPaid = $house->payments
-                ->where('type', 'satpam')
-                ->where('month', $month)
-                ->where('year', $year)
-                ->where('status', 'lunas')
-                ->first();
+            // Backward-compatible hardcoded fields
+            $kebersihanPaid = collect($payments)->firstWhere('type', 'kebersihan');
+            $satpamPaid = collect($payments)->firstWhere('type', 'satpam');
 
             return [
                 'house_id' => $house->id,
@@ -113,9 +135,10 @@ class PaymentController extends Controller
                 'resident_id' => $resident ? $resident->id : null,
                 'should_pay' => $shouldPay,
                 'kebersihan_lunas' => $kebersihanPaid !== null,
-                'kebersihan_amount' => $kebersihanPaid ? $kebersihanPaid->amount : 0,
+                'kebersihan_amount' => $kebersihanPaid ? $kebersihanPaid['amount'] : 0,
                 'satpam_lunas' => $satpamPaid !== null,
-                'satpam_amount' => $satpamPaid ? $satpamPaid->amount : 0,
+                'satpam_amount' => $satpamPaid ? $satpamPaid['amount'] : 0,
+                'payments' => $payments
             ];
         });
 

@@ -13,16 +13,20 @@ class HouseController extends Controller
     public function index()
     {
         // Load houses with their active resident (through houseResidents and resident)
-        $houses = House::with(['activeResidentRelation.resident'])->get()->map(function ($house) {
-            $activeRes = $house->activeResidentRelation;
-            return [
-                'id' => $house->id,
-                'house_code' => $house->house_code,
-                'status' => $house->status,
-                'active_resident' => $activeRes ? $activeRes->resident : null,
-                'start_date' => $activeRes ? $activeRes->start_date->format('Y-m-d') : null,
-            ];
-        });
+        $houses = House::with(['activeResidentRelation.resident'])
+            ->get()
+            ->sortBy('house_code', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->map(function ($house) {
+                $activeRes = $house->activeResidentRelation;
+                return [
+                    'id' => $house->id,
+                    'house_code' => $house->house_code,
+                    'status' => $house->status,
+                    'active_resident' => $activeRes ? $activeRes->resident : null,
+                    'start_date' => $activeRes ? $activeRes->start_date->format('Y-m-d') : null,
+                ];
+            });
 
         return response()->json($houses);
     }
@@ -79,11 +83,15 @@ class HouseController extends Controller
 
         // 2. Set up new occupancy or mark house empty
         if ($residentId) {
+            // Ambil nama penghuni untuk disimpan sebagai snapshot
+            $residentName = Resident::find($residentId)?->name;
+
             HouseResident::create([
-                'house_id' => $house->id,
-                'resident_id' => $residentId,
-                'is_active' => true,
-                'start_date' => $startDate,
+                'house_id'      => $house->id,
+                'resident_id'   => $residentId,
+                'resident_name' => $residentName,   // snapshot nama
+                'is_active'     => true,
+                'start_date'    => $startDate,
             ]);
 
             $house->update(['status' => 'dihuni']);
@@ -105,11 +113,13 @@ class HouseController extends Controller
             ->get()
             ->map(function ($hr) {
                 return [
-                    'id' => $hr->id,
-                    'resident' => $hr->resident,
-                    'is_active' => $hr->is_active,
-                    'start_date' => $hr->start_date->format('Y-m-d'),
-                    'end_date' => $hr->end_date ? $hr->end_date->format('Y-m-d') : null,
+                    'id'             => $hr->id,
+                    // Gunakan display_name: nama dari relasi atau snapshot resident_name
+                    'resident_name'  => $hr->display_name,
+                    'resident'       => $hr->resident,
+                    'is_active'      => $hr->is_active,
+                    'start_date'     => $hr->start_date->format('Y-m-d'),
+                    'end_date'       => $hr->end_date ? $hr->end_date->format('Y-m-d') : null,
                 ];
             });
 
