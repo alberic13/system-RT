@@ -23,9 +23,17 @@ return new class extends Migration
 
             // 2. Isi resident_name dari data residents yang ada saat ini
             DB::statement('
-                UPDATE house_residents hr
-                JOIN residents r ON hr.resident_id = r.id
-                SET hr.resident_name = r.name
+                UPDATE house_residents
+                SET resident_name = (
+                    SELECT name
+                    FROM residents
+                    WHERE residents.id = house_residents.resident_id
+                )
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM residents
+                    WHERE residents.id = house_residents.resident_id
+                )
             ');
         }
 

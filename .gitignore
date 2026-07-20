@@ -26,3 +26,5 @@ Thumbs.db
 /task.md
 /walkthrough.md
 /.agents
+logs.*.json
+
