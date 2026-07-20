@@ -10,20 +10,21 @@ use App\Models\Payment;
 use App\Models\Expense;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // Truncate tables first to avoid duplicates
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Schema::disableForeignKeyConstraints();
         DB::table('users')->truncate();
         DB::table('houses')->truncate();
         DB::table('residents')->truncate();
         DB::table('house_residents')->truncate();
         DB::table('payments')->truncate();
         DB::table('expenses')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
         // Table: users
         // No data found
