@@ -11,11 +11,14 @@ import {
     Home, 
     CreditCard, 
     FileSpreadsheet,
-    Building
+    Building,
+    Menu,
+    X
 } from 'lucide-react';
 
 function App() {
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const navigationItems = [
         { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
@@ -44,17 +47,35 @@ function App() {
 
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+            {/* Sidebar backdrop overlay (mobile only) */}
+            {isSidebarOpen && (
+                <div 
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden transition-opacity duration-300"
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800">
+            <aside className={`fixed inset-y-0 left-0 w-64 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 z-50 transform transition-transform duration-300 lg:static lg:translate-x-0 ${
+                isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}>
                 {/* Branding header */}
-                <div className="p-6 flex items-center space-x-3 border-b border-slate-800">
-                    <div className="p-2 bg-indigo-600 rounded-xl text-white">
-                        <Building size={20} />
+                <div className="p-6 flex items-center justify-between border-b border-slate-800">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-indigo-600 rounded-xl text-white">
+                            <Building size={20} />
+                        </div>
+                        <div>
+                            <h1 className="font-extrabold text-white text-base tracking-wide">Aplikasi Admin RT</h1>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Perumahan zalde</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="font-extrabold text-white text-base tracking-wide">Aplikasi Admin RT</h1>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Perumahan zalde</p>
-                    </div>
+                    <button 
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg lg:hidden"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
 
                 {/* Sidebar Navigation */}
@@ -65,7 +86,10 @@ function App() {
                         return (
                             <button
                                 key={item.id}
-                                onClick={() => setActiveTab(item.id)}
+                                onClick={() => {
+                                    setActiveTab(item.id);
+                                    setIsSidebarOpen(false);
+                                }}
                                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${
                                     isActive 
                                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' 
@@ -89,8 +113,14 @@ function App() {
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col overflow-hidden">
                 {/* Topbar */}
-                <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+                <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 sm:px-8 shrink-0">
                     <div className="flex items-center space-x-3">
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="p-2 -ml-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg lg:hidden"
+                        >
+                            <Menu size={20} />
+                        </button>
                         <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span className="text-xs font-semibold text-slate-400">Database MySQL Connected</span>
                     </div>
@@ -102,7 +132,7 @@ function App() {
                 </header>
 
                 {/* Scrollable page body */}
-                <div className="flex-1 overflow-y-auto p-8 max-w-7xl w-full mx-auto">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
                     {renderActiveComponent()}
                 </div>
             </main>

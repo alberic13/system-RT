@@ -414,13 +414,13 @@ export default function Expenses() {
             {/* Expense Form Modal */}
             {isFormOpen && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl max-w-sm w-full shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="p-5 border-b border-slate-100">
+                    <div className="bg-white rounded-2xl max-w-sm w-full max-h-[90vh] shadow-xl border border-slate-100 overflow-hidden flex flex-col">
+                        <div className="p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-base font-bold text-slate-800">
                                 {editingId ? 'Edit Catatan Pengeluaran' : 'Catat Pengeluaran Baru'}
                             </h3>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
                             {/* Description */}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Keterangan</label>

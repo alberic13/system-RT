@@ -161,7 +161,7 @@ export default function Residents() {
             </div>
 
             {/* Filters and Search */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center max-w-md">
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center w-full max-w-md">
                 <Search className="text-slate-400 mr-2" size={18} />
                 <input 
                     type="text" 
@@ -274,14 +274,14 @@ export default function Residents() {
             {/* Form Modal */}
             {isFormModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl max-w-md w-full shadow-xl border border-slate-100 overflow-hidden transform transition-all">
-                        <div className="p-6 border-b border-slate-100">
+                    <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] shadow-xl border border-slate-100 overflow-hidden flex flex-col transform transition-all">
+                        <div className="p-6 border-b border-slate-100 shrink-0">
                             <h3 className="text-lg font-bold text-slate-800">
                                 {editingId ? 'Edit Data Warga' : 'Tambah Warga Baru'}
                             </h3>
                         </div>
                         
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
                             {/* Name */}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Nama Lengkap</label>
@@ -385,8 +385,8 @@ export default function Residents() {
             {/* KTP Preview Modal */}
             {isPreviewModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col">
-                        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] shadow-2xl overflow-hidden flex flex-col">
+                        <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                             <h3 className="text-sm font-bold text-slate-800">Foto KTP Warga</h3>
                             <button 
                                 onClick={() => setIsPreviewModalOpen(false)}
@@ -395,11 +395,11 @@ export default function Residents() {
                                 Tutup
                             </button>
                         </div>
-                        <div className="p-6 bg-slate-900 flex items-center justify-center min-h-[300px]">
+                        <div className="p-6 bg-slate-900 flex items-center justify-center flex-1 overflow-auto">
                             <img 
                                 src={previewPhotoUrl} 
                                 alt="Foto KTP Warga" 
-                                className="max-h-[500px] max-w-full object-contain rounded-lg border border-slate-800"
+                                className="max-h-full max-w-full object-contain rounded-lg border border-slate-800"
                             />
                         </div>
                     </div>

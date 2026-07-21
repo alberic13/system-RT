@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     getHouses, 
     createHouse, 
@@ -44,6 +44,8 @@ export default function Houses() {
         start_date: todayLocalISO()
     });
 
+    const detailRef = useRef(null);
+
     useEffect(() => {
         loadHousesData();
         loadResidentsData();
@@ -83,6 +85,13 @@ export default function Houses() {
         try {
             const res = await getHouseResidentHistory(house.id);
             setHistory(res.data);
+            
+            // Scroll to details on mobile/tablet
+            if (window.innerWidth < 1024) {
+                setTimeout(() => {
+                    detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
         } catch (error) {
             console.error("Error loading history:", error);
         } finally {
@@ -208,7 +217,7 @@ export default function Houses() {
                             </div>
 
                             {/* Grid container */}
-                            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+                            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-3">
                                 {houses.map(house => {
                                     const isSelected = selectedHouse?.id === house.id;
                                     const isOccupied = house.status === 'dihuni';
@@ -220,7 +229,7 @@ export default function Houses() {
                                         <button
                                             key={house.id}
                                             onClick={() => handleSelectHouse(house)}
-                                            className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition text-center ${
+                                            className={`p-2 sm:p-4 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition text-center ${
                                                 isSelected 
                                                     ? 'border-indigo-600 bg-indigo-50/30 text-indigo-700 ring-2 ring-indigo-500/20' 
                                                     : isTetap
@@ -258,7 +267,7 @@ export default function Houses() {
                     </div>
 
                     {/* House Details Panel (1/3 width) */}
-                    <div className="space-y-4">
+                    <div ref={detailRef} className="space-y-4">
                         {selectedHouse ? (
                             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
                                 {/* House header */}
@@ -369,11 +378,11 @@ export default function Houses() {
             {/* Add House Modal */}
             {isAddHouseOpen && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl max-w-sm w-full shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="p-5 border-b border-slate-100">
+                    <div className="bg-white rounded-2xl max-w-sm w-full max-h-[90vh] shadow-xl border border-slate-100 overflow-hidden flex flex-col">
+                        <div className="p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-base font-bold text-slate-800">Tambah Unit Rumah Baru</h3>
                         </div>
-                        <form onSubmit={handleAddHouse} className="p-5 space-y-4">
+                        <form onSubmit={handleAddHouse} className="p-5 space-y-4 overflow-y-auto flex-1">
                             <div>
                                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Kode / Nomor Rumah</label>
                                 <input 
@@ -408,11 +417,11 @@ export default function Houses() {
             {/* Assign Resident Modal */}
             {isAssignOpen && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-2xl max-w-sm w-full shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="p-5 border-b border-slate-100">
+                    <div className="bg-white rounded-2xl max-w-sm w-full max-h-[90vh] shadow-xl border border-slate-100 overflow-hidden flex flex-col">
+                        <div className="p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-base font-bold text-slate-800">Hubungkan Penghuni - {selectedHouse?.house_code}</h3>
                         </div>
-                        <form onSubmit={handleAssign} className="p-5 space-y-4">
+                        <form onSubmit={handleAssign} className="p-5 space-y-4 overflow-y-auto flex-1">
                             <div>
                                 <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Pilih Penghuni</label>
                                 <select 
