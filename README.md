@@ -22,7 +22,7 @@ Perumahan Elite terdiri dari **total 20 unit rumah** (15 rumah dihuni tetap & 5 
 
 ## 🗄️ Entity Relationship Diagram (ERD) & Skema Data
 
-Berikut adalah visualisasi **Diagram Relasi Entitas (ERD)** dan skema relasi basis data yang diterapkan pada **System-RT**:
+Berikut adalah visualisasi **Diagram Relasi Entitas (ERD)** dan skema relasi basis data yang diterapkan pada **System-RT** : 
 
 ```mermaid
 erDiagram
