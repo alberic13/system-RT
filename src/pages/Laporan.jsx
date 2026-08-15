@@ -43,14 +43,14 @@ export default function Laporan() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm print:hidden">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-slate-200/80 p-6 rounded-2xl shadow-xs print:hidden">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-3">
-            <BarChart3 className="w-7 h-7 text-sky-600" />
+          <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-3 tracking-tight">
+            <BarChart3 className="w-7 h-7 text-slate-800" />
             Laporan Keuangan & Rekap Kas RT
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1 font-normal">
             Rekapitulasi transparansi kas iuran bulanan warga Perumahan Zalde (Tahun {selectedTahun}).
           </p>
         </div>
@@ -61,7 +61,7 @@ export default function Laporan() {
             <select
               value={selectedTahun}
               onChange={(e) => setSelectedTahun(Number(e.target.value))}
-              className="bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-sky-500 outline-none font-semibold"
+              className="bg-slate-50 border border-slate-300/80 text-slate-800 text-xs rounded-xl px-3 py-2 focus:ring-2 focus:ring-slate-900 outline-none font-semibold"
             >
               <option value={2026}>2026</option>
               <option value={2025}>2025</option>
@@ -86,50 +86,50 @@ export default function Laporan() {
 
       {/* Summary Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 print:grid-cols-3">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <span className="text-xs text-slate-500 uppercase font-semibold">Total Pemasukan Tahunan</span>
-          <div className="text-2xl font-extrabold text-sky-600 mt-2">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pemasukan Tahunan</span>
+          <div className="text-2xl font-extrabold text-indigo-600 mt-2 tracking-tight">
             {formatRupiah(laporanData?.totalPemasukanTahun)}
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <span className="text-xs text-slate-500 uppercase font-semibold">Total Pengeluaran Tahunan</span>
-          <div className="text-2xl font-extrabold text-rose-600 mt-2">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pengeluaran Tahunan</span>
+          <div className="text-2xl font-extrabold text-rose-600 mt-2 tracking-tight">
             {formatRupiah(laporanData?.totalPengeluaranTahun)}
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <span className="text-xs text-slate-500 uppercase font-semibold">Saldo Sisa Akhir Kas RT</span>
-          <div className="text-2xl font-extrabold text-emerald-600 mt-2">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Saldo Sisa Akhir Kas RT</span>
+          <div className="text-2xl font-extrabold text-emerald-600 mt-2 tracking-tight">
             {formatRupiah(laporanData?.saldoAkhir)}
           </div>
         </div>
       </div>
 
       {/* Summary Table 12 Months */}
-      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4 print:p-0 print:border-none print:shadow-none">
-        <h2 className="text-lg font-bold text-slate-900 print:text-black">
+      <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4 print:p-0 print:border-none print:shadow-none">
+        <h2 className="text-lg font-bold text-slate-900 tracking-tight print:text-black">
           Tabel Ringkasan Saldo Bulanan (1 Tahun)
         </h2>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 border-collapse">
-            <thead className="bg-slate-50 uppercase font-semibold text-[11px] text-slate-500 border-b border-slate-200 print:bg-slate-200">
+            <thead className="bg-slate-50 uppercase font-bold text-[11px] text-slate-400 tracking-wider border-b border-slate-200/80 print:bg-slate-200">
               <tr>
-                <th className="px-4 py-3">Bulan</th>
-                <th className="px-4 py-3 text-right">Pemasukan (Iuran)</th>
-                <th className="px-4 py-3 text-right">Pengeluaran</th>
-                <th className="px-4 py-3 text-right">Surplus / Defisit</th>
-                <th className="px-4 py-3 text-right">Akumulasi Saldo Sisa</th>
+                <th className="px-4 py-3.5">Bulan</th>
+                <th className="px-4 py-3.5 text-right">Pemasukan (Iuran)</th>
+                <th className="px-4 py-3.5 text-right">Pengeluaran</th>
+                <th className="px-4 py-3.5 text-right">Surplus / Defisit</th>
+                <th className="px-4 py-3.5 text-right">Akumulasi Saldo Sisa</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 print:divide-slate-300">
               {laporanData?.monthlySummary?.map((m) => (
-                <tr key={m.bulanIndex} className="hover:bg-slate-50 transition-colors">
+                <tr key={m.bulanIndex} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-4 py-3 font-extrabold text-slate-900">{m.namaBulan}</td>
-                  <td className="px-4 py-3 text-right font-bold text-sky-600">
+                  <td className="px-4 py-3 text-right font-bold text-indigo-600">
                     {formatRupiah(m.pemasukan)}
                   </td>
                   <td className="px-4 py-3 text-right font-bold text-rose-600">
@@ -149,13 +149,13 @@ export default function Laporan() {
       </div>
 
       {/* Rincian Bulan Terpilih */}
-      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-6 print:break-before-page">
+      <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-6 print:break-before-page">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 print:border-slate-300">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
               Rincian Kas Bulan {namaBulanList[selectedBulan - 1]} {selectedTahun}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 font-normal">
               Daftar transaksi lunas pemasukan iuran & rincian pengeluaran kas RT.
             </p>
           </div>
@@ -165,7 +165,7 @@ export default function Laporan() {
             <select
               value={selectedBulan}
               onChange={(e) => setSelectedBulan(Number(e.target.value))}
-              className="bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-sky-500 outline-none font-semibold"
+              className="bg-slate-50 border border-slate-300/80 text-slate-800 text-xs rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-slate-900 outline-none font-semibold"
             >
               {namaBulanList.map((m, idx) => (
                 <option key={idx + 1} value={idx + 1}>{m}</option>
@@ -178,11 +178,11 @@ export default function Laporan() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Table Pemasukan */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between bg-sky-50 p-3 rounded-xl border border-sky-200">
-              <span className="text-xs font-bold text-sky-800 flex items-center gap-1.5">
-                <ArrowUpRight className="w-4 h-4 text-sky-600" /> Pemasukan (Iuran Lunas)
+            <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+              <span className="text-xs font-bold text-indigo-700 flex items-center gap-1.5">
+                <ArrowUpRight className="w-4 h-4 text-indigo-600" /> Pemasukan (Iuran Lunas)
               </span>
-              <span className="text-xs font-extrabold text-sky-700">
+              <span className="text-xs font-extrabold text-indigo-600">
                 {formatRupiah(laporanData?.detailBulan?.totalPemasukan)}
               </span>
             </div>
@@ -190,9 +190,9 @@ export default function Laporan() {
             {laporanData?.detailBulan?.listPemasukan.length === 0 ? (
               <p className="text-xs text-slate-400 italic py-4 text-center">Belum ada pemasukan lunas pada bulan ini.</p>
             ) : (
-              <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-xl">
+              <div className="max-h-80 overflow-y-auto border border-slate-200/80 rounded-xl">
                 <table className="w-full text-left text-xs text-slate-700">
-                  <thead className="bg-slate-50 uppercase text-[10px] text-slate-500 sticky top-0">
+                  <thead className="bg-slate-50 uppercase font-bold text-[10px] text-slate-400 sticky top-0">
                     <tr>
                       <th className="p-2.5">Rumah / Warga</th>
                       <th className="p-2.5">Jenis</th>
@@ -207,7 +207,7 @@ export default function Laporan() {
                           <span className="block text-[10px] text-slate-500">{p.penghuni?.nama_lengkap}</span>
                         </td>
                         <td className="p-2.5 font-semibold text-slate-700">{p.jenis_iuran}</td>
-                        <td className="p-2.5 text-right font-bold text-sky-600">{formatRupiah(p.jumlah)}</td>
+                        <td className="p-2.5 text-right font-bold text-indigo-600">{formatRupiah(p.jumlah)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -218,7 +218,7 @@ export default function Laporan() {
 
           {/* Table Pengeluaran */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between bg-rose-50 p-3 rounded-xl border border-rose-200">
+            <div className="flex items-center justify-between bg-rose-50/80 p-3.5 rounded-xl border border-rose-200/80">
               <span className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
                 <ArrowDownRight className="w-4 h-4 text-rose-600" /> Pengeluaran Kas
               </span>
@@ -230,9 +230,9 @@ export default function Laporan() {
             {laporanData?.detailBulan?.listPengeluaran.length === 0 ? (
               <p className="text-xs text-slate-400 italic py-4 text-center">Belum ada pengeluaran kas pada bulan ini.</p>
             ) : (
-              <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-xl">
+              <div className="max-h-80 overflow-y-auto border border-slate-200/80 rounded-xl">
                 <table className="w-full text-left text-xs text-slate-700">
-                  <thead className="bg-slate-50 uppercase text-[10px] text-slate-500 sticky top-0">
+                  <thead className="bg-slate-50 uppercase font-bold text-[10px] text-slate-400 sticky top-0">
                     <tr>
                       <th className="p-2.5">Kategori / Ket</th>
                       <th className="p-2.5 text-right">Nominal</th>
