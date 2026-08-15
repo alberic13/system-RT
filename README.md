@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# System-RT — Aplikasi Manajemen Administrasi & Keuangan RT (Vite + React SPA)
 
-## Getting Started
+Aplikasi web modern Single Page Application (SPA) berbasis **Vite**, **React 19 (JSX)**, **Tailwind CSS v4**, **React Router DOM**, dan **LocalStorage Data Engine**.
 
-First, run the development server:
+---
+
+## 📌 Studi Kasus & Tarif Iuran
+
+Perumahan Elite terdiri dari **total 20 unit rumah** (15 rumah dihuni tetap & 5 rumah kontrak / sementara / kosong):
+1. **Tarif Iuran Bulanan**:
+   - **Iuran Satpam**: Rp 100.000 / bulan
+   - **Iuran Kebersihan**: Rp 15.000 / bulan
+2. **Aturan Penagihan**:
+   - Penghuni Tetap: Ditagih rutin setiap bulan.
+   - Rumah Kontrak / Sementara: Ditagih *hanya* jika terdapat penghuninya (Status Rumah **Dihuni**).
+   - Opsi Pembayaran: Mendukung pembayaran rutin 1 bulan maupun **1 Tahun Sekaligus**.
+3. **Pengeluaran RT**:
+   - Rutin: Gaji 2 satpam (Rp 1.500.000/bln), Listrik pos satpam (Rp 150.000/bln).
+   - Insidental: Perbaikan jalan, perbaikan selokan, perawatan taman, dll.
+
+---
+
+## ✨ Fitur Utama Aplikasi (React SPA)
+
+1. **Mengelola Penghuni (`/penghuni`)**:
+   - Tambah & Ubah data penghuni (`.jsx`).
+   - Atribut: Nama Lengkap, Foto KTP (dengan preview & uploader), Status (Tetap/Kontrak), Nomor Telepon, Status Pernikahan (Sudah Menikah/Belum Menikah).
+2. **Mengelola Rumah & Riwayat (`/rumah`)**:
+   - Tampilan Grid 20 Unit Rumah (Status: **Dihuni** / **Tidak Dihuni**).
+   - Menghubungkan & mengubah penghuni rumah (otomatis menyimpan log histori `RiwayatPenghuni`).
+   - Catatan historis penghuni per rumah (siapa saja yang pernah & sedang menempati beserta tanggal masuk/keluar).
+   - Histori pembayaran iuran per rumah beserta status **Lunas** / **Belum Lunas**.
+3. **Mengelola Pembayaran (`/pembayaran`)**:
+   - Input pembayaran iuran Satpam (100k) & Kebersihan (15k).
+   - Opsi pembayaran 1 Bulan atau Paket Lunas **1 Tahun Sekaligus**.
+   - Matriks filter pembayaran per bulan, tahun, & jenis iuran.
+4. **Mengelola Pengeluaran (`/pengeluaran`)**:
+   - Catat pengeluaran kas RT rutin & insidental berdasarkan kategori, nominal, tanggal, & rincian deskripsi.
+5. **Laporan Keuangan & Grafik (`/laporan` & `/`)**:
+   - **Grafik Tren Keuangan 1 Tahun** (Recharts): Menampilkan Pemasukan, Pengeluaran, & Akumulasi Saldo Sisa Kas RT.
+   - Laporan Rekapitulasi Keuangan & detail rincian pemasukan/pengeluaran per bulan.
+   - Fitur Cetak / Ekspor PDF Laporan Keuangan.
+6. **Entity Relationship Diagram (`/erd`)**:
+   - Visualisasi Diagram ERD interaktif & penjelasan relasi database.
+
+---
+
+## 🛠️ Cara Menjalankan (Vite Dev Server)
 
 ```bash
+cd c:/xampp/htdocs/system-rt
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka browser di: `http://localhost:5173` atau port aktif yang ditampilkan.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧪 Verifikasi Build Production
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+```
