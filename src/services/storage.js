@@ -317,6 +317,44 @@ export const StorageService = {
     };
   },
 
+  getRiwayatByRumahId: (rumahId) => {
+    const riwayatList = JSON.parse(localStorage.getItem(STORAGE_KEYS.RIWAYAT) || '[]');
+    const penghuniList = JSON.parse(localStorage.getItem(STORAGE_KEYS.PENGHUNI) || '[]');
+
+    return riwayatList
+      .filter(rw => rw.rumah_id === Number(rumahId))
+      .map(rw => {
+        const pen = penghuniList.find(p => p.id === rw.penghuni_id);
+        return {
+          ...rw,
+          penghuni: pen || null,
+          status_penghuni: rw.status_penghuni || (pen ? pen.status_penghuni : 'Tetap')
+        };
+      })
+      .sort((a, b) => b.id - a.id);
+  },
+
+  addRiwayat: (data) => {
+    const list = JSON.parse(localStorage.getItem(STORAGE_KEYS.RIWAYAT) || '[]');
+    const newRiwayat = {
+      id: Date.now(),
+      rumah_id: Number(data.rumah_id),
+      penghuni_id: Number(data.penghuni_id),
+      tanggal_masuk: data.tanggal_masuk || new Date().toISOString().split('T')[0],
+      tanggal_keluar: data.tanggal_keluar || null,
+      catatan: data.catatan || 'Riwayat dimasukkan manual',
+    };
+    list.push(newRiwayat);
+    localStorage.setItem(STORAGE_KEYS.RIWAYAT, JSON.stringify(list));
+    return newRiwayat;
+  },
+
+  deleteRiwayat: (id) => {
+    let list = JSON.parse(localStorage.getItem(STORAGE_KEYS.RIWAYAT) || '[]');
+    list = list.filter(rw => rw.id !== Number(id));
+    localStorage.setItem(STORAGE_KEYS.RIWAYAT, JSON.stringify(list));
+  },
+
   addRumah: (nomor_rumah) => {
     const list = JSON.parse(localStorage.getItem(STORAGE_KEYS.RUMAH) || '[]');
     const newRumah = {
@@ -330,7 +368,20 @@ export const StorageService = {
     return newRumah;
   },
 
-  updateRumah: (id, status_huni, penghuni_id, catatan_riwayat) => {
+  updateRumah: (idParam, status_huniParam, penghuni_idParam, catatan_riwayatParam) => {
+    let id, status_huni, penghuni_id, catatan_riwayat;
+    if (typeof idParam === 'object' && idParam !== null) {
+      id = idParam.id;
+      status_huni = idParam.status_huni;
+      penghuni_id = idParam.penghuni_id;
+      catatan_riwayat = idParam.catatan_riwayat;
+    } else {
+      id = idParam;
+      status_huni = status_huniParam;
+      penghuni_id = penghuni_idParam;
+      catatan_riwayat = catatan_riwayatParam;
+    }
+
     let rumahList = JSON.parse(localStorage.getItem(STORAGE_KEYS.RUMAH) || '[]');
     let riwayatList = JSON.parse(localStorage.getItem(STORAGE_KEYS.RIWAYAT) || '[]');
     let pembayaranList = JSON.parse(localStorage.getItem(STORAGE_KEYS.PEMBAYARAN) || '[]');

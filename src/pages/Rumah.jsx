@@ -11,7 +11,10 @@ import {
   CheckCircle2,
   XCircle,
   Users,
-  Search
+  Search,
+  Trash2,
+  Calendar,
+  FileText
 } from 'lucide-react';
 import { StorageService } from '../services/storage';
 
@@ -29,6 +32,7 @@ export default function Rumah() {
   const [targetRumah, setTargetRumah] = useState(null);
   const [selectedPenghuniId, setSelectedPenghuniId] = useState('');
   const [statusHuniForm, setStatusHuniForm] = useState('Dihuni');
+  const [catatanRiwayatForm, setCatatanRiwayatForm] = useState('');
 
   // History Modal State
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -55,6 +59,7 @@ export default function Rumah() {
     setTargetRumah(r);
     setSelectedPenghuniId(r.penghuni_id ? String(r.penghuni_id) : '');
     setStatusHuniForm(r.status_huni);
+    setCatatanRiwayatForm('');
     setShowAssignModal(true);
   };
 
@@ -68,6 +73,7 @@ export default function Rumah() {
       id: targetRumah.id,
       status_huni: statusHuniForm,
       penghuni_id: newPenghuniId,
+      catatan_riwayat: catatanRiwayatForm,
     });
 
     setShowAssignModal(false);
@@ -79,6 +85,19 @@ export default function Rumah() {
     const hist = StorageService.getRiwayatByRumahId(r.id);
     setHistoryList(hist);
     setShowHistoryModal(true);
+  };
+
+  const refreshHistory = (houseId) => {
+    const hist = StorageService.getRiwayatByRumahId(houseId);
+    setHistoryList(hist);
+  };
+
+  const handleDeleteHistory = (id) => {
+    if (confirm("Apakah Anda yakin ingin menghapus catatan riwayat ini?")) {
+      StorageService.deleteRiwayat(id);
+      if (historyHouse) refreshHistory(historyHouse.id);
+      loadData();
+    }
   };
 
   const filtered = rumahList.filter(r => {
@@ -270,6 +289,17 @@ export default function Rumah() {
                 </div>
               )}
 
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Catatan Riwayat / Keterangan (Opsional)</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Perpanjangan masa sewa, Kontrak 1 tahun..."
+                  value={catatanRiwayatForm}
+                  onChange={(e) => setCatatanRiwayatForm(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300/80 text-slate-900 text-xs rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-slate-900 outline-none font-semibold"
+                />
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
@@ -307,30 +337,89 @@ export default function Rumah() {
               </button>
             </div>
 
+            {/* Sub-Header / Info Count Riwayat */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700">
+                Daftar Rekam Jejak ({historyList.length})
+              </span>
+            </div>
+
+            {/* List Riwayat */}
             {historyList.length === 0 ? (
-              <p className="text-xs text-slate-400 italic text-center py-8">Belum ada catatan riwayat penghuni untuk unit rumah ini.</p>
+              <div className="py-8 text-center text-slate-400 text-xs italic space-y-1">
+                <History className="w-8 h-8 mx-auto text-slate-300" />
+                <p>Belum ada catatan riwayat penghuni untuk unit rumah ini.</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {historyList.map((item) => (
-                  <div key={item.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-1">
-                    <div className="flex justify-between font-extrabold text-slate-900">
-                      <span>{item.penghuni?.nama_lengkap}</span>
-                      <span className="text-[10px] text-slate-500 font-bold bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                        {item.status_penghuni}
-                      </span>
+                {historyList.map((item) => {
+                  const isCurrentActive = !item.tanggal_keluar;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-4 rounded-2xl border text-xs space-y-2 relative transition-all ${
+                        isCurrentActive
+                          ? 'bg-emerald-50/60 border-emerald-200/80'
+                          : 'bg-slate-50 border-slate-200/80'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                            isCurrentActive ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-white'
+                          }`}>
+                            {item.penghuni ? item.penghuni.nama_lengkap.charAt(0).toUpperCase() : '?'}
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                              <span>{item.penghuni ? item.penghuni.nama_lengkap : 'Penghuni Terhapus'}</span>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${
+                                isCurrentActive
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                  : 'bg-slate-200 text-slate-600 border-slate-300'
+                              }`}>
+                                {isCurrentActive ? 'Aktif' : 'Terdahulu'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              Status Warga: {item.status_penghuni || item.penghuni?.status_penghuni || '-'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteHistory(item.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                          title="Hapus Catatan Riwayat"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-200/50 text-slate-600">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>
+                            Huni: <strong className="text-slate-800">{item.tanggal_masuk}</strong> s/d <strong className="text-slate-800">{item.tanggal_keluar || 'Sekarang'}</strong>
+                          </span>
+                        </div>
+                        {item.catatan && (
+                          <div className="flex items-center gap-1 col-span-1 sm:col-span-2">
+                            <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="italic text-slate-700">{item.catatan}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-slate-500 text-[11px]">
-                      Periode Huni: <span className="font-semibold text-slate-700">{item.tanggal_masuk}</span> s/d <span className="font-semibold text-slate-700">{item.tanggal_keluar || 'Sekarang'}</span>
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             <div className="text-right pt-2 border-t border-slate-100">
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold"
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs"
               >
                 Tutup
               </button>
@@ -341,3 +430,4 @@ export default function Rumah() {
     </div>
   );
 }
+
