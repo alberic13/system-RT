@@ -2,11 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   BarChart3,
   Printer,
-  TrendingUp,
-  Receipt,
   ArrowUpRight,
-  ArrowDownRight,
-  Wallet
+  ArrowDownRight
 } from 'lucide-react';
 import { StorageService } from '../services/storage';
 

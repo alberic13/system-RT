@@ -4,9 +4,6 @@ import {
   PlusCircle,
   Search,
   Trash2,
-  Calendar,
-  Tag,
-  DollarSign,
   X
 } from 'lucide-react';
 import { StorageService } from '../services/storage';

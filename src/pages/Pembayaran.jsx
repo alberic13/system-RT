@@ -6,10 +6,6 @@ import {
   CheckCircle2,
   XCircle,
   Calendar,
-  Building,
-  User,
-  Filter,
-  Check,
   X
 } from 'lucide-react';
 import { StorageService } from '../services/storage';

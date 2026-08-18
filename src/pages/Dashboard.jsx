@@ -12,8 +12,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Check,
-  Sparkles
+  Check
 } from 'lucide-react';
 import {
   ResponsiveContainer,
